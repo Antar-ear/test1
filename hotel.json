@@ -1,0 +1,60 @@
+{
+  "hotelName": "The Meridian Hotel",
+  "wifiPassword": "MeridianGuest2024!",
+  "checkInTime": "3:00 PM",
+  "checkoutTime": "11:00 AM",
+  "emergency_number": "911",
+  "front_desk_number": "ext. 0",
+  "menu_items": [
+    {
+      "name": "Continental Breakfast",
+      "description": "Fresh pastries, fruits, coffee and juice",
+      "price": 25.00,
+      "serving_time": "6:30 AM - 10:30 AM"
+    },
+    {
+      "name": "Club Sandwich",
+      "description": "Triple layer made sandwich with fries. option of chicken, panneer, Tofu",
+      "price": 18.00,
+      "serving_time": "11:00 AM - 4:00 PM"
+    },
+    { "item": "Classic Burger with Fries", "price": 17.50 },
+    { "item": "Veg Burger with Fries", "price": 14.50 },
+    { "item": "Chicken Caesar Salad", "price": 15.00 },
+    { "item": "Margherita Pizza (12-inch)", "price": 16.00 },
+    { "item": "Bowl of Seasonal Soup", "price": 9.00 },
+    { "item": "Cheesecake Slice", "price": 8.50 }
+  ],
+  "facilities": [
+    {
+      "name": "Restaurant",
+      "description": "Fine dining with international cuisine",
+      "location": "Ground Floor",
+      "opening_time": "7:00 PM",
+      "closing_time": "10:00 PM",
+      "booking_required": true
+    },
+    {
+      "name": "Swimming Pool",
+      "description": "Outdoor heated pool",
+      "location": "Rooftop",
+      "opening_time": "6:00 AM",
+      "closing_time": "10:00 PM",
+      "booking_required": false
+    },
+     {
+      "name": "Business Center",
+      "description": "Two computers and a printer available 24/7",
+      "location": "Second Floor"
+    },
+    {
+      "name": "Parking",
+      "description": "On-site parking is available for $15 per day"
+    }
+  ],
+   "localAttractions": [
+    "The City Convention Center is a 15-minute walk away.",
+    "The Downtown Shopping Plaza is just a 5-minute taxi ride from the hotel.",
+    "Greenwood Park, perfect for a morning jog, is located two blocks east."
+  ]
+}
