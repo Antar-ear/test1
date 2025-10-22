@@ -261,7 +261,177 @@
       color: #fbbf24;
       border-color: rgba(245, 158, 11, 0.2);
     }
-    
+
+    /* DEPARTMENT ROLE SELECTOR STYLES */
+    .department-role-selector {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .department-role-selector h2 {
+      font-size: 2.5em;
+      color: #ffffff;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .department-subtitle {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 1.1em;
+      margin-bottom: 40px;
+    }
+
+    .department-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+      margin-top: 40px;
+    }
+
+    .department-card {
+      background: #2d2d54;
+      border-radius: 20px;
+      padding: 40px 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .department-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.05));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .department-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .department-card:hover::before {
+      opacity: 1;
+    }
+
+    .department-icon {
+      font-size: 4em;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+    }
+
+    .department-name {
+      font-size: 1.8em;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 15px;
+    }
+
+    .department-description {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 1em;
+      line-height: 1.5;
+    }
+
+    /* DEPARTMENT CARD COLOR THEMES */
+    .receptionist-card {
+      border-color: rgba(66, 153, 225, 0.3);
+    }
+
+    .receptionist-card:hover {
+      background: linear-gradient(135deg, #2b6cb0, #2c5282);
+      border-color: #4299e1;
+      box-shadow: 0 20px 40px rgba(66, 153, 225, 0.4);
+    }
+
+    .housekeeping-card {
+      border-color: rgba(72, 187, 120, 0.3);
+    }
+
+    .housekeeping-card:hover {
+      background: linear-gradient(135deg, #2f855a, #276749);
+      border-color: #48bb78;
+      box-shadow: 0 20px 40px rgba(72, 187, 120, 0.4);
+    }
+
+    .restaurant-card {
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .restaurant-card:hover {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      border-color: #f59e0b;
+      box-shadow: 0 20px 40px rgba(245, 158, 11, 0.4);
+    }
+
+    .security-card {
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .security-card:hover {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      border-color: #ef4444;
+      box-shadow: 0 20px 40px rgba(239, 68, 68, 0.4);
+    }
+
+    /* DEPARTMENT PAGE THEMES */
+    .receptionist-theme .dashboard-header h2 {
+      color: #4299e1;
+    }
+
+    .receptionist-theme .enable-notifications-btn {
+      background-color: #4299e1;
+    }
+
+    .receptionist-theme .enable-notifications-btn:hover {
+      background-color: #2b6cb0;
+    }
+
+    .housekeeping-theme .dashboard-header h2 {
+      color: #48bb78;
+    }
+
+    .housekeeping-theme .enable-notifications-btn {
+      background-color: #48bb78;
+    }
+
+    .housekeeping-theme .enable-notifications-btn:hover {
+      background-color: #2f855a;
+    }
+
+    .restaurant-theme .dashboard-header h2 {
+      color: #f59e0b;
+    }
+
+    .restaurant-theme .enable-notifications-btn {
+      background-color: #f59e0b;
+    }
+
+    .restaurant-theme .enable-notifications-btn:hover {
+      background-color: #d97706;
+    }
+
+    .security-theme .dashboard-header h2 {
+      color: #ef4444;
+    }
+
+    .security-theme .enable-notifications-btn {
+      background-color: #ef4444;
+    }
+
+    .security-theme .enable-notifications-btn:hover {
+      background-color: #dc2626;
+    }
+
     /* Keep all existing styles for other components */
     .main-content{padding:30px;display:none;position:relative;background:#1a1a2e;color:#ffffff}
     .main-content.active{display:block}
@@ -1389,38 +1559,85 @@
     <!-- Keep all existing content sections exactly as they were -->
     <div class="main-content" id="staffContent">
       <button class="back-btn" onclick="goBackToRoleSelector()">← Back to Roles</button>
-      <div class="requests-dashboard">
+      <div class="department-role-selector">
+        <h2>Select Your Department</h2>
+        <p class="department-subtitle">Choose your staff role to view your department's requests</p>
+        <div class="department-cards">
+          <button class="department-card receptionist-card" onclick="selectDepartment('Receptionist')">
+            <div class="department-icon">🏨</div>
+            <div class="department-name">Receptionist</div>
+            <div class="department-description">Handle guest inquiries, check-ins, and general assistance</div>
+          </button>
+          <button class="department-card housekeeping-card" onclick="selectDepartment('Housekeeping')">
+            <div class="department-icon">🧹</div>
+            <div class="department-name">Housekeeping</div>
+            <div class="department-description">Manage room cleaning, maintenance, and supplies</div>
+          </button>
+          <button class="department-card restaurant-card" onclick="selectDepartment('Restaurant')">
+            <div class="department-icon">🍽️</div>
+            <div class="department-name">Restaurant</div>
+            <div class="department-description">Process food orders and dining requests</div>
+          </button>
+          <button class="department-card security-card" onclick="selectDepartment('Security')">
+            <div class="department-icon">🛡️</div>
+            <div class="department-name">Security</div>
+            <div class="department-description">Monitor safety concerns and emergency situations</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECEPTIONIST DEPARTMENT PAGE -->
+    <div class="main-content" id="receptionistContent">
+      <button class="back-btn" onclick="goBackToDepartmentSelector()">← Back to Departments</button>
+      <div class="requests-dashboard receptionist-theme">
         <div class="dashboard-header">
-            <h2>Live Service Requests</h2>
-            <button class="enable-notifications-btn" id="enableNotificationsBtn">Enable Notifications</button>
-            <button class="enable-notifications-btn" style="background-color: #dc3545;" onclick="fetch('/api/push/test',{method:'POST'})">Send Test Push</button>
+            <h2>🏨 Receptionist Requests</h2>
+            <button class="enable-notifications-btn" id="enableNotificationsBtnReceptionist">Enable Notifications</button>
         </div>
-        
-        <div id="department-Receptionist" class="department-section">
-          <h3 class="department-title clickable-department" onclick="showDepartmentHistory('Receptionist')">
-            🛎️ Receptionist <span class="history-indicator">(Click to view history)</span>
-          </h3>
+        <div id="receptionist-requests" class="department-section">
           <div class="request-list"></div>
         </div>
-        
-        <div id="department-Restaurant" class="department-section">
-          <h3 class="department-title clickable-department" onclick="showDepartmentHistory('Restaurant')">
-            🍔 Restaurant <span class="history-indicator">(Click to view history)</span>
-          </h3>
+      </div>
+    </div>
+
+    <!-- HOUSEKEEPING DEPARTMENT PAGE -->
+    <div class="main-content" id="housekeepingContent">
+      <button class="back-btn" onclick="goBackToDepartmentSelector()">← Back to Departments</button>
+      <div class="requests-dashboard housekeeping-theme">
+        <div class="dashboard-header">
+            <h2>🧹 Housekeeping Requests</h2>
+            <button class="enable-notifications-btn" id="enableNotificationsBtnHousekeeping">Enable Notifications</button>
+        </div>
+        <div id="housekeeping-requests" class="department-section">
           <div class="request-list"></div>
         </div>
-        
-        <div id="department-Housekeeping" class="department-section">
-          <h3 class="department-title clickable-department" onclick="showDepartmentHistory('Housekeeping')">
-            🧹 Housekeeping <span class="history-indicator">(Click to view history)</span>
-          </h3>
+      </div>
+    </div>
+
+    <!-- RESTAURANT DEPARTMENT PAGE -->
+    <div class="main-content" id="restaurantContent">
+      <button class="back-btn" onclick="goBackToDepartmentSelector()">← Back to Departments</button>
+      <div class="requests-dashboard restaurant-theme">
+        <div class="dashboard-header">
+            <h2>🍽️ Restaurant Requests</h2>
+            <button class="enable-notifications-btn" id="enableNotificationsBtnRestaurant">Enable Notifications</button>
+        </div>
+        <div id="restaurant-requests" class="department-section">
           <div class="request-list"></div>
         </div>
-        
-        <div id="department-Security" class="department-section">
-          <h3 class="department-title clickable-department" onclick="showDepartmentHistory('Security')">
-            🛡️ Security <span class="history-indicator">(Click to view history)</span>
-          </h3>
+      </div>
+    </div>
+
+    <!-- SECURITY DEPARTMENT PAGE -->
+    <div class="main-content" id="securityContent">
+      <button class="back-btn" onclick="goBackToDepartmentSelector()">← Back to Departments</button>
+      <div class="requests-dashboard security-theme">
+        <div class="dashboard-header">
+            <h2>🛡️ Security Requests</h2>
+            <button class="enable-notifications-btn" id="enableNotificationsBtnSecurity">Enable Notifications</button>
+        </div>
+        <div id="security-requests" class="department-section">
           <div class="request-list"></div>
         </div>
       </div>
@@ -1910,10 +2127,10 @@
       
       socket.on('new_request', (request) => {
         console.log('📥 Received new_request:', request);
-        
+
         if (request.isEmergency || request.priority === 'HIGH') {
           console.log('🚨 EMERGENCY REQUEST RECEIVED:', request);
-          
+
           let originalTitle = document.title;
           let flashCount = 0;
           const flashInterval = setInterval(() => {
@@ -1924,10 +2141,10 @@
               document.title = originalTitle;
             }
           }, 500);
-          
+
           playEmergencyAlert();
           showEmergencyModal(request);
-          
+
           if (Notification.permission === 'granted') {
             new Notification(`🚨 EMERGENCY - ${request.department}`, {
               body: `Room ${request.roomNumber}: ${request.message}`,
@@ -1937,8 +2154,13 @@
             });
           }
         }
-        
-        renderRequestCard(request);
+
+        // Use the department-specific render function if viewing a department page
+        if (currentDepartment && currentRole === 'department') {
+          renderDepartmentRequestCard(request);
+        } else {
+          renderRequestCard(request);
+        }
       });
       
       socket.on('request_acknowledged', (requestId) => {
@@ -1957,10 +2179,10 @@
       document.getElementById(role+'Content').classList.add('active');
       if (!socket) initSocket();
       if (role === 'analytics') { loadAnalyticsDashboard(); analyticsInterval = setInterval(loadAnalyticsDashboard, 10000); }
-      else if (role === 'staff') { 
-        socket.emit('join_room', { role: 'staff' }); 
-        checkNotificationPermission(); 
-        setTimeout(loadActiveRequests, 500);
+      else if (role === 'staff') {
+        socket.emit('join_room', { role: 'staff' });
+        checkNotificationPermission();
+        // Don't load requests here - staff will select their department first
       }
       else if (pendingRoomFromQR) { joinRoom(pendingRoomFromQR); }
       else if (role === 'receptionist') { const manual = prompt('Enter Room ID:'); if (manual) joinRoom(manual); }
@@ -1971,8 +2193,126 @@
       document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
       document.getElementById('roleSelector').style.display = 'block';
       document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
-      if (currentRole === 'staff') { socket.emit('leave_room', { role: 'staff' }); }
+      if (currentRole === 'staff' || currentRole === 'department') {
+        socket.emit('leave_room', { role: 'staff' });
+      }
       currentRole = null;
+      currentDepartment = null;
+    }
+
+    // Global variable to track current department
+    let currentDepartment = null;
+
+    function selectDepartment(department) {
+      currentDepartment = department;
+      currentRole = 'department';
+
+      // Hide staff content (department selector)
+      document.getElementById('staffContent').classList.remove('active');
+
+      // Show the appropriate department page
+      const departmentContentId = department.toLowerCase() + 'Content';
+      document.getElementById(departmentContentId).classList.add('active');
+
+      // Setup notification button for this department
+      const notificationBtn = document.getElementById('enableNotificationsBtn' + department);
+      if (notificationBtn) {
+        notificationBtn.onclick = checkNotificationPermission;
+        if (Notification.permission === 'granted') {
+          notificationBtn.textContent = '✓ Notifications Enabled';
+          notificationBtn.disabled = true;
+        }
+      }
+
+      // Load requests for this department only
+      loadDepartmentRequests(department);
+    }
+
+    function goBackToDepartmentSelector() {
+      // Hide all department pages
+      document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
+
+      // Show staff content (department selector)
+      document.getElementById('staffContent').classList.add('active');
+
+      // Clear the department-specific request lists
+      ['receptionist', 'housekeeping', 'restaurant', 'security'].forEach(dept => {
+        const list = document.querySelector(`#${dept}-requests .request-list`);
+        if (list) list.innerHTML = '';
+      });
+
+      currentDepartment = null;
+      currentRole = 'staff';
+    }
+
+    function loadDepartmentRequests(department) {
+      if (!socket) initSocket();
+
+      // Fetch all active requests and filter by department
+      fetch('/api/requests/active')
+        .then(res => res.json())
+        .then(requests => {
+          console.log(`📥 Loaded ${requests.length} total requests, filtering for ${department}`);
+
+          // Filter requests for this department
+          const departmentRequests = requests.filter(req => req.department === department);
+          console.log(`📋 Found ${departmentRequests.length} requests for ${department}`);
+
+          // Clear existing requests
+          const list = document.querySelector(`#${department.toLowerCase()}-requests .request-list`);
+          if (list) {
+            list.innerHTML = '';
+
+            // Render each request
+            departmentRequests.forEach(req => renderDepartmentRequestCard(req));
+          }
+        })
+        .catch(err => console.error('Error loading department requests:', err));
+    }
+
+    function renderDepartmentRequestCard(req) {
+      // Only render if we're on the correct department page
+      if (!currentDepartment || req.department !== currentDepartment) {
+        return;
+      }
+
+      const list = document.querySelector(`#${req.department.toLowerCase()}-requests .request-list`);
+      if (!list) return;
+
+      const existing = document.getElementById(req.id);
+      if(existing) existing.remove();
+
+      const isEmergency = req.isEmergency || ['EMERGENCY', 'SECURITY_THREAT', 'MEDICAL_EMERGENCY'].includes(req.intent);
+      const priority = req.priority || (isEmergency ? 'HIGH' : 'NORMAL');
+      const card = document.createElement('div');
+      card.className = `request-card department-${req.department}`;
+      card.id = req.id;
+      if (isEmergency) {
+        card.classList.add('emergency-request');
+      }
+      const time = new Date(req.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const emergencyIcon = isEmergency ? '🚨 ' : '';
+      const priorityBadge = priority === 'HIGH' ? '<span class="priority-high">HIGH PRIORITY</span>' : '';
+      card.innerHTML = `
+          <div class="request-header">
+              <div class="request-info">
+                  <span class="request-room">${emergencyIcon}Room ${req.roomNumber || req.room.replace('room-', '')}</span>
+                  ${priorityBadge}
+              </div>
+              <span class="request-time">${time}</span>
+          </div>
+          <p class="request-message ${isEmergency ? 'emergency-message' : ''}">${req.message}</p>
+          <div class="request-actions">
+              <button class="acknowledge-btn ${isEmergency ? 'emergency-ack' : ''}" data-id="${req.id}" ${isEmergency ? 'data-emergency="true"' : ''}>
+                  ${isEmergency ? '🚨 ACKNOWLEDGE EMERGENCY' : 'Acknowledge'}
+              </button>
+          </div>
+      `;
+      if (isEmergency) {
+        list.insertBefore(card, list.firstChild);
+      } else {
+        list.appendChild(card);
+      }
     }
 
     // ============ MODERN GUEST INTERFACE FUNCTIONS ============
