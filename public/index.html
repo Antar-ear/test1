@@ -1576,7 +1576,6 @@
       </div>
     </div>
 
-    <!-- Keep all existing content sections exactly as they were -->
     <div class="main-content" id="staffContent">
       <button class="back-btn" onclick="goBackToRoleSelector()">← Back to Roles</button>
       <div class="department-role-selector">
@@ -1607,7 +1606,6 @@
       </div>
     </div>
 
-    <!-- RECEPTIONIST DEPARTMENT PAGE -->
     <div class="main-content" id="receptionistContent">
       <button class="back-btn" onclick="goBackToDepartmentSelector()">← Back to Departments</button>
       <div class="requests-dashboard receptionist-theme">
@@ -1621,7 +1619,6 @@
             </div>
         </div>
         
-        <!-- Stats Grid -->
         <div class="department-stats">
           <div class="stat-card">
             <div class="stat-number" id="statsReceptionistTotal">0</div>
@@ -1641,7 +1638,6 @@
           </div>
         </div>
         
-        <!-- View Toggle -->
         <div class="view-toggle">
           <button class="view-toggle-btn active" id="toggleReceptionistActive" onclick="toggleDepartmentView('Receptionist', 'active')">
             🔴 Active Requests
@@ -1651,14 +1647,12 @@
           </button>
         </div>
         
-        <!-- Requests Section -->
         <div id="receptionist-requests" class="department-section">
           <div class="request-list" id="receptionistRequestList"></div>
         </div>
       </div>
     </div>
 
-    <!-- HOUSEKEEPING DEPARTMENT PAGE -->
     <div class="main-content" id="housekeepingContent">
       <button class="back-btn" onclick="goBackToDepartmentSelector()">← Back to Departments</button>
       <div class="requests-dashboard housekeeping-theme">
@@ -1672,7 +1666,6 @@
             </div>
         </div>
         
-        <!-- Stats Grid -->
         <div class="department-stats">
           <div class="stat-card">
             <div class="stat-number" id="statsHousekeepingTotal">0</div>
@@ -1692,7 +1685,6 @@
           </div>
         </div>
         
-        <!-- View Toggle -->
         <div class="view-toggle">
           <button class="view-toggle-btn active" id="toggleHousekeepingActive" onclick="toggleDepartmentView('Housekeeping', 'active')">
             🔴 Active Requests
@@ -1702,14 +1694,12 @@
           </button>
         </div>
         
-        <!-- Requests Section -->
         <div id="housekeeping-requests" class="department-section">
           <div class="request-list" id="housekeepingRequestList"></div>
         </div>
       </div>
     </div>
 
-    <!-- RESTAURANT DEPARTMENT PAGE -->
     <div class="main-content" id="restaurantContent">
       <button class="back-btn" onclick="goBackToDepartmentSelector()">← Back to Departments</button>
       <div class="requests-dashboard restaurant-theme">
@@ -1723,7 +1713,6 @@
             </div>
         </div>
         
-        <!-- Stats Grid -->
         <div class="department-stats">
           <div class="stat-card">
             <div class="stat-number" id="statsRestaurantTotal">0</div>
@@ -1743,7 +1732,6 @@
           </div>
         </div>
         
-        <!-- View Toggle -->
         <div class="view-toggle">
           <button class="view-toggle-btn active" id="toggleRestaurantActive" onclick="toggleDepartmentView('Restaurant', 'active')">
             🔴 Active Requests
@@ -1753,14 +1741,12 @@
           </button>
         </div>
         
-        <!-- Requests Section -->
         <div id="restaurant-requests" class="department-section">
           <div class="request-list" id="restaurantRequestList"></div>
         </div>
       </div>
     </div>
 
-    <!-- SECURITY DEPARTMENT PAGE -->
     <div class="main-content" id="securityContent">
       <button class="back-btn" onclick="goBackToDepartmentSelector()">← Back to Departments</button>
       <div class="requests-dashboard security-theme">
@@ -1774,7 +1760,6 @@
             </div>
         </div>
         
-        <!-- Stats Grid -->
         <div class="department-stats">
           <div class="stat-card">
             <div class="stat-number" id="statsSecurityTotal">0</div>
@@ -1794,7 +1779,6 @@
           </div>
         </div>
         
-        <!-- View Toggle -->
         <div class="view-toggle">
           <button class="view-toggle-btn active" id="toggleSecurityActive" onclick="toggleDepartmentView('Security', 'active')">
             🔴 Active Requests
@@ -1804,14 +1788,12 @@
           </button>
         </div>
         
-        <!-- Requests Section -->
         <div id="security-requests" class="department-section">
           <div class="request-list" id="securityRequestList"></div>
         </div>
       </div>
     </div>
 
-    <!-- UPDATED ANALYTICS CONTENT -->
     <div class="main-content" id="analyticsContent">
       <button class="back-btn" onclick="goBackToRoleSelector()">← Back to Roles</button>
       <div class="analytics-dashboard">
@@ -1823,7 +1805,6 @@
           <span id="lastUpdate" style="color:#666;font-size:14px;"></span>
         </div>
         
-        <!-- Overview Metrics -->
         <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-value" id="todayTranslations">0</div>
@@ -1847,10 +1828,8 @@
           </div>
         </div>
 
-        <!-- 2x2 Dashboard Grid -->
         <div class="dashboard-grid">
           
-          <!-- Most Active Rooms (Top Left) -->
           <div class="dashboard-card">
             <h3>Most Active Rooms</h3>
             <div id="activeRoomsSection">
@@ -1858,7 +1837,6 @@
             </div>
           </div>
 
-          <!-- Service Request Types Table (Top Right) -->
           <div class="dashboard-card">
             <h3>Service Request Types</h3>
             <div class="table-container">
@@ -1879,7 +1857,6 @@
             </div>
           </div>
 
-          <!-- Key Performance Indicators (Bottom Left) -->
           <div class="dashboard-card">
             <h3>Key Performance Indicators</h3>
             <div class="kpi-list">
@@ -1902,7 +1879,6 @@
             </div>
           </div>
 
-          <!-- Calls by Department Table (Bottom Right) -->
           <div class="dashboard-card">
             <h3>Calls by Department</h3>
             <div class="table-container">
@@ -1956,10 +1932,8 @@
       </div>
     </div>
 
-    <!-- MODIFIED GUEST CONTENT WITH MODERN INTERFACE -->
     <div class="main-content" id="guestContent">
       <div class="modern-guest-interface">
-        <!-- Header -->
         <div class="chat-header">
           <div class="room-info">
             <h2 id="modernGuestRoomId">Room 301</h2>
@@ -1972,7 +1946,6 @@
           </div>
         </div>
 
-        <!-- Chat Messages Area -->
         <div class="chat-messages" id="modernGuestMessages">
           <div class="ai-greeting">
             <div class="ai-avatar">🤖</div>
@@ -1993,14 +1966,12 @@
           </div>
         </div>
 
-        <!-- Translation Button -->
         <div class="translation-trigger">
           <button class="globe-btn" onclick="openTranslationModal()">
             🌐 Tap here for translation
           </button>
         </div>
 
-        <!-- Quick Actions -->
         <div class="quick-actions">
           <button class="action-btn reception" onclick="sendQuickRequest('reception')">
             🛎️ Reception
@@ -2013,7 +1984,6 @@
           </button>
         </div>
 
-        <!-- Message Input -->
         <div class="message-input-area">
           <textarea 
             id="modernGuestTextInput" 
@@ -2029,7 +1999,6 @@
         </div>
       </div>
 
-      <!-- Translation Modal -->
       <div class="translation-modal" id="translationModal">
         <div class="modal-content">
           <div class="modal-header">
@@ -2066,7 +2035,6 @@
             <p class="voice-instruction" id="voiceInstructionText">Waiting for staff connection...</p>
           </div>
 
-          <!-- Transcript Section -->
           <div class="transcript-section" id="transcriptSection" style="display: none;">
             <div class="transcript-header" onclick="toggleTranscript()">
               <span>Transcript</span>
@@ -2074,17 +2042,14 @@
             </div>
             <div class="transcript-content" id="transcriptContent">
               <div class="transcript-messages" id="transcriptMessages">
-                <!-- Transcript messages will be added here -->
-              </div>
+                </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Status messages -->
       <div id="modernGuestStatus" class="status-overlay"></div>
 
-      <!-- Original Guest Interface (hidden when modern is active) -->
       <div class="translation-interface">
         <h3>Guest Interface</h3>
         <div class="room-id">Room: <span id="guestRoomId">-</span></div>
@@ -2114,7 +2079,7 @@
       </div>
     </div>
 
-    <div class="main-content" id="receptionistContent">
+    <div class="main-content" id="staffTranslationContent">
       <div class="translation-interface">
         <h3 style="color:#ffffff">Staff Interface</h3>
         <div class="room-id">Room: <span id="receptionistRoomId">-</span></div>
@@ -2173,7 +2138,6 @@
     </div>
   </div>
   
-  <!-- UPDATED JAVASCRIPT WITH FIX FOR EVENT LISTENER NULL CHECK -->
   <script>
     const MIN_MS = 1000, MAX_MS = 15000;
     let socket = null, currentRole = null, currentRoom = null, pendingRoomFromQR = null;
@@ -2337,23 +2301,38 @@
       });
     }
 
-    function selectRole(role, btnEl){
-      if (analyticsInterval) { clearInterval(analyticsInterval); analyticsInterval = null; }
-      currentRole = role;
-      document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
-      btnEl?.classList.add('active');
-      document.getElementById('roleSelector').style.display = 'none';
-      document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
-      document.getElementById(role+'Content').classList.add('active');
-      if (!socket) initSocket();
-      if (role === 'analytics') { loadAnalyticsDashboard(); analyticsInterval = setInterval(loadAnalyticsDashboard, 10000); }
-      else if (role === 'staff') {
-        socket.emit('join_room', { role: 'staff' });
-        checkNotificationPermission();
-        // Don't load requests here - staff will select their department first
-      }
-      else if (pendingRoomFromQR) { joinRoom(pendingRoomFromQR); }
-      else if (role === 'receptionist') { const manual = prompt('Enter Room ID:'); if (manual) joinRoom(manual); }
+    function selectRole(role, btnEl) {
+        if (analyticsInterval) { clearInterval(analyticsInterval); analyticsInterval = null; }
+        currentRole = role;
+        document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+        btnEl?.classList.add('active');
+        document.getElementById('roleSelector').style.display = 'none';
+        document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
+
+        const params = new URLSearchParams(location.search);
+        const isRoomLink = !!params.get('room');
+
+        if (role === 'receptionist' && isRoomLink) {
+            // When staff joins a specific room, show the translation interface
+            document.getElementById('staffTranslationContent').classList.add('active');
+        } else {
+            // Normal behavior for admin, analytics, or staff dashboard
+            document.getElementById(role + 'Content').classList.add('active');
+        }
+
+        if (!socket) initSocket();
+        if (role === 'analytics') {
+            loadAnalyticsDashboard();
+            analyticsInterval = setInterval(loadAnalyticsDashboard, 10000);
+        } else if (role === 'staff') {
+            socket.emit('join_room', { role: 'staff' });
+            checkNotificationPermission();
+        } else if (pendingRoomFromQR) {
+            joinRoom(pendingRoomFromQR);
+        } else if (role === 'receptionist' && !isRoomLink) {
+            const manual = prompt('Enter Room ID:');
+            if (manual) joinRoom(manual);
+        }
     }
     
     function goBackToRoleSelector() {
