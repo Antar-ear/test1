@@ -641,9 +641,29 @@
     .back-btn {position: absolute;top: 20px;left: 30px;background: #f0f2f5;border: 1px solid #dadde1;color: #4b4f56;padding: 8px 16px;border-radius: 20px;cursor: pointer;font-weight: 600;font-size: 0.9em;transition: background-color .2s;z-index: 10;}
     .back-btn:hover {background-color: #e4e6e9;}
     .requests-dashboard { padding-top: 40px; background: #2d2d54; border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.1); margin: 0; }
-    .dashboard-header { text-align: center; margin-bottom: 20px; color: #ffffff; }
+    .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: #ffffff; }
+    .dashboard-header h2 { margin: 0; }
+    .dashboard-header-buttons { display: flex; gap: 10px; align-items: center; }
     .enable-notifications-btn { background-color: #007bff; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; border: none; font-size: 1em; }
     .enable-notifications-btn:disabled { background-color: #cccccc; cursor: not-allowed; }
+    .filter-dropdown { padding: 10px 15px; border: 2px solid rgba(255,255,255,0.2); border-radius: 5px; background: #3a3a68; color: #ffffff; font-size: 1em; cursor: pointer; }
+    .filter-dropdown:focus { outline: none; border-color: #667eea; }
+    
+    /* Stats Grid */
+    .department-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+    .stat-card { background: #3a3a68; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+    .stat-number { font-size: 2em; font-weight: bold; color: #ffffff; margin-bottom: 5px; }
+    .stat-label { color: #a0a0b8; font-size: 0.9em; }
+    
+    /* View Toggle */
+    .view-toggle { display: flex; gap: 0; margin-bottom: 20px; background: #3a3a68; border-radius: 10px; padding: 5px; }
+    .view-toggle-btn { flex: 1; padding: 10px 20px; border: none; background: transparent; color: #a0a0b8; cursor: pointer; border-radius: 8px; font-weight: 600; transition: all 0.2s; }
+    .view-toggle-btn.active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+    .view-toggle-btn:hover:not(.active) { background: rgba(255,255,255,0.05); }
+    
+    /* Export Button */
+    .export-requests-btn { background: #10b981; color: white; padding: 8px 16px; border-radius: 5px; border: none; cursor: pointer; font-size: 0.9em; }
+    .export-requests-btn:hover { background: #059669; }
     .department-section { margin-bottom: 30px; background: #3a3a68; padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
     .department-title { font-size: 1.5em; font-weight: 600; color: #ffffff; padding-bottom: 10px; border-bottom: 2px solid rgba(255,255,255,0.1); margin-bottom: 15px; }
     .request-list { display: flex; flex-direction: column; gap: 15px; }
@@ -1593,10 +1613,47 @@
       <div class="requests-dashboard receptionist-theme">
         <div class="dashboard-header">
             <h2>🏨 Receptionist Requests</h2>
-            <button class="enable-notifications-btn" id="enableNotificationsBtnReceptionist">Enable Notifications</button>
+            <div class="dashboard-header-buttons">
+              <select class="filter-dropdown" id="filterRoomReceptionist" onchange="filterRequestsByRoom('Receptionist')">
+                <option value="">🔍 Filter by Room</option>
+              </select>
+              <button class="enable-notifications-btn" id="enableNotificationsBtnReceptionist">Enable Notifications</button>
+            </div>
         </div>
+        
+        <!-- Stats Grid -->
+        <div class="department-stats">
+          <div class="stat-card">
+            <div class="stat-number" id="statsReceptionistTotal">0</div>
+            <div class="stat-label">Total Requests</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statsReceptionistAcknowledged">0</div>
+            <div class="stat-label">Acknowledged</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statsReceptionistCalls">0</div>
+            <div class="stat-label">Calls Made</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statsReceptionistResponse">0%</div>
+            <div class="stat-label">Response Rate</div>
+          </div>
+        </div>
+        
+        <!-- View Toggle -->
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" id="toggleReceptionistActive" onclick="toggleDepartmentView('Receptionist', 'active')">
+            🔴 Active Requests
+          </button>
+          <button class="view-toggle-btn" id="toggleReceptionistHistory" onclick="toggleDepartmentView('Receptionist', 'history')">
+            📋 All History
+          </button>
+        </div>
+        
+        <!-- Requests Section -->
         <div id="receptionist-requests" class="department-section">
-          <div class="request-list"></div>
+          <div class="request-list" id="receptionistRequestList"></div>
         </div>
       </div>
     </div>
@@ -1607,10 +1664,47 @@
       <div class="requests-dashboard housekeeping-theme">
         <div class="dashboard-header">
             <h2>🧹 Housekeeping Requests</h2>
-            <button class="enable-notifications-btn" id="enableNotificationsBtnHousekeeping">Enable Notifications</button>
+            <div class="dashboard-header-buttons">
+              <select class="filter-dropdown" id="filterRoomHousekeeping" onchange="filterRequestsByRoom('Housekeeping')">
+                <option value="">🔍 Filter by Room</option>
+              </select>
+              <button class="enable-notifications-btn" id="enableNotificationsBtnHousekeeping">Enable Notifications</button>
+            </div>
         </div>
+        
+        <!-- Stats Grid -->
+        <div class="department-stats">
+          <div class="stat-card">
+            <div class="stat-number" id="statsHousekeepingTotal">0</div>
+            <div class="stat-label">Total Requests</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statsHousekeepingAcknowledged">0</div>
+            <div class="stat-label">Acknowledged</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statsHousekeepingCalls">0</div>
+            <div class="stat-label">Calls Made</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statsHousekeepingResponse">0%</div>
+            <div class="stat-label">Response Rate</div>
+          </div>
+        </div>
+        
+        <!-- View Toggle -->
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" id="toggleHousekeepingActive" onclick="toggleDepartmentView('Housekeeping', 'active')">
+            🔴 Active Requests
+          </button>
+          <button class="view-toggle-btn" id="toggleHousekeepingHistory" onclick="toggleDepartmentView('Housekeeping', 'history')">
+            📋 All History
+          </button>
+        </div>
+        
+        <!-- Requests Section -->
         <div id="housekeeping-requests" class="department-section">
-          <div class="request-list"></div>
+          <div class="request-list" id="housekeepingRequestList"></div>
         </div>
       </div>
     </div>
@@ -1621,10 +1715,47 @@
       <div class="requests-dashboard restaurant-theme">
         <div class="dashboard-header">
             <h2>🍽️ Restaurant Requests</h2>
-            <button class="enable-notifications-btn" id="enableNotificationsBtnRestaurant">Enable Notifications</button>
+            <div class="dashboard-header-buttons">
+              <select class="filter-dropdown" id="filterRoomRestaurant" onchange="filterRequestsByRoom('Restaurant')">
+                <option value="">🔍 Filter by Room</option>
+              </select>
+              <button class="enable-notifications-btn" id="enableNotificationsBtnRestaurant">Enable Notifications</button>
+            </div>
         </div>
+        
+        <!-- Stats Grid -->
+        <div class="department-stats">
+          <div class="stat-card">
+            <div class="stat-number" id="statsRestaurantTotal">0</div>
+            <div class="stat-label">Total Requests</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statsRestaurantAcknowledged">0</div>
+            <div class="stat-label">Acknowledged</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statsRestaurantCalls">0</div>
+            <div class="stat-label">Calls Made</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statsRestaurantResponse">0%</div>
+            <div class="stat-label">Response Rate</div>
+          </div>
+        </div>
+        
+        <!-- View Toggle -->
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" id="toggleRestaurantActive" onclick="toggleDepartmentView('Restaurant', 'active')">
+            🔴 Active Requests
+          </button>
+          <button class="view-toggle-btn" id="toggleRestaurantHistory" onclick="toggleDepartmentView('Restaurant', 'history')">
+            📋 All History
+          </button>
+        </div>
+        
+        <!-- Requests Section -->
         <div id="restaurant-requests" class="department-section">
-          <div class="request-list"></div>
+          <div class="request-list" id="restaurantRequestList"></div>
         </div>
       </div>
     </div>
@@ -1635,10 +1766,47 @@
       <div class="requests-dashboard security-theme">
         <div class="dashboard-header">
             <h2>🛡️ Security Requests</h2>
-            <button class="enable-notifications-btn" id="enableNotificationsBtnSecurity">Enable Notifications</button>
+            <div class="dashboard-header-buttons">
+              <select class="filter-dropdown" id="filterRoomSecurity" onchange="filterRequestsByRoom('Security')">
+                <option value="">🔍 Filter by Room</option>
+              </select>
+              <button class="enable-notifications-btn" id="enableNotificationsBtnSecurity">Enable Notifications</button>
+            </div>
         </div>
+        
+        <!-- Stats Grid -->
+        <div class="department-stats">
+          <div class="stat-card">
+            <div class="stat-number" id="statsSecurityTotal">0</div>
+            <div class="stat-label">Total Requests</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statsSecurityAcknowledged">0</div>
+            <div class="stat-label">Acknowledged</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statsSecurityCalls">0</div>
+            <div class="stat-label">Calls Made</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statsSecurityResponse">0%</div>
+            <div class="stat-label">Response Rate</div>
+          </div>
+        </div>
+        
+        <!-- View Toggle -->
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" id="toggleSecurityActive" onclick="toggleDepartmentView('Security', 'active')">
+            🔴 Active Requests
+          </button>
+          <button class="view-toggle-btn" id="toggleSecurityHistory" onclick="toggleDepartmentView('Security', 'history')">
+            📋 All History
+          </button>
+        </div>
+        
+        <!-- Requests Section -->
         <div id="security-requests" class="department-section">
-          <div class="request-list"></div>
+          <div class="request-list" id="securityRequestList"></div>
         </div>
       </div>
     </div>
@@ -2245,70 +2413,223 @@
       currentRole = 'staff';
     }
 
+    // Global variable to store current view and filter
+    let departmentView = {}; // { departmentName: 'active' or 'history' }
+    let departmentFilter = {}; // { departmentName: 'room-1' or '' }
+    let departmentAllRequests = {}; // Store all requests for each department
+
     function loadDepartmentRequests(department) {
       if (!socket) initSocket();
+      
+      // Initialize view settings
+      if (!departmentView[department]) {
+        departmentView[department] = 'active';
+      }
+      if (!departmentFilter[department]) {
+        departmentFilter[department] = '';
+      }
 
-      // Fetch all active requests and filter by department
+      // Fetch active requests
       fetch('/api/requests/active')
         .then(res => res.json())
-        .then(requests => {
-          console.log(`📥 Loaded ${requests.length} total requests, filtering for ${department}`);
+        .then(activeRequests => {
+          console.log(`📥 Loaded ${activeRequests.length} total active requests`);
 
-          // Filter requests for this department
-          const departmentRequests = requests.filter(req => req.department === department);
-          console.log(`📋 Found ${departmentRequests.length} requests for ${department}`);
-
-          // Clear existing requests
-          const list = document.querySelector(`#${department.toLowerCase()}-requests .request-list`);
-          if (list) {
-            list.innerHTML = '';
-
-            // Render each request
-            departmentRequests.forEach(req => renderDepartmentRequestCard(req));
-          }
+          // Fetch history requests (last 30 days)
+          return fetch(`/api/requests/department/${department}?days=30&limit=1000`)
+            .then(res => res.json())
+            .then(historyData => {
+              // Combine active and historical requests
+              const allRequests = [...activeRequests, ...historyData.requests]
+                .filter(req => req.department === department);
+              
+              // Remove duplicates (active requests might also be in history)
+              const uniqueRequests = Array.from(
+                new Map(allRequests.map(req => [req.id, req])).values()
+              );
+              
+              // Store all requests
+              departmentAllRequests[department] = uniqueRequests;
+              
+              console.log(`📋 Found ${uniqueRequests.length} total requests for ${department}`);
+              
+              // Calculate stats
+              updateDepartmentStats(department, uniqueRequests);
+              
+              // Populate room filter dropdown
+              populateRoomFilter(department, uniqueRequests);
+              
+              // Render requests based on current view
+              renderDepartmentRequests(department);
+            });
         })
         .catch(err => console.error('Error loading department requests:', err));
     }
 
-    function renderDepartmentRequestCard(req) {
+    function updateDepartmentStats(department, requests) {
+      const total = requests.length;
+      const acknowledged = requests.filter(r => r.status === 'acknowledged').length;
+      const calls = requests.filter(r => r.status === 'call_triggered').length;
+      const responseRate = total > 0 ? Math.round((acknowledged / total) * 100) : 0;
+      
+      const deptLower = department.toLowerCase();
+      document.getElementById(`stats${department}Total`).textContent = total;
+      document.getElementById(`stats${department}Acknowledged`).textContent = acknowledged;
+      document.getElementById(`stats${department}Calls`).textContent = calls;
+      document.getElementById(`stats${department}Response`).textContent = responseRate + '%';
+    }
+
+    function populateRoomFilter(department, requests) {
+      const filterDropdown = document.getElementById(`filterRoom${department}`);
+      if (!filterDropdown) return;
+      
+      // Get unique room numbers
+      const rooms = [...new Set(requests.map(r => r.roomNumber || r.room.replace('room-', '')))];
+      rooms.sort((a, b) => {
+        const numA = parseInt(a) || 0;
+        const numB = parseInt(b) || 0;
+        return numA - numB;
+      });
+      
+      // Clear existing options except the first one
+      filterDropdown.innerHTML = '<option value="">🔍 Filter by Room</option>';
+      
+      // Add room options
+      rooms.forEach(room => {
+        const option = document.createElement('option');
+        option.value = room;
+        option.textContent = `Room ${room}`;
+        filterDropdown.appendChild(option);
+      });
+    }
+
+    function toggleDepartmentView(department, view) {
+      departmentView[department] = view;
+      
+      // Update toggle buttons
+      document.getElementById(`toggle${department}Active`).classList.toggle('active', view === 'active');
+      document.getElementById(`toggle${department}History`).classList.toggle('active', view === 'history');
+      
+      // Re-render requests
+      renderDepartmentRequests(department);
+    }
+
+    function filterRequestsByRoom(department) {
+      const filterDropdown = document.getElementById(`filterRoom${department}`);
+      departmentFilter[department] = filterDropdown.value;
+      
+      // Re-render requests
+      renderDepartmentRequests(department);
+    }
+
+    function renderDepartmentRequests(department) {
+      const list = document.getElementById(`${department.toLowerCase()}RequestList`);
+      if (!list) return;
+      
+      list.innerHTML = '';
+      
+      const allRequests = departmentAllRequests[department] || [];
+      const currentView = departmentView[department] || 'active';
+      const currentFilter = departmentFilter[department] || '';
+      
+      // Filter requests based on view
+      let filteredRequests = allRequests;
+      
+      if (currentView === 'active') {
+        // Show only requests without status (pending/active)
+        filteredRequests = allRequests.filter(r => !r.status || r.status === 'pending');
+      }
+      // If 'history', show all requests
+      
+      // Apply room filter if selected
+      if (currentFilter) {
+        filteredRequests = filteredRequests.filter(r => {
+          const roomNum = r.roomNumber || r.room.replace('room-', '');
+          return roomNum === currentFilter;
+        });
+      }
+      
+      // Sort by timestamp (newest first)
+      filteredRequests.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      
+      if (filteredRequests.length === 0) {
+        list.innerHTML = '<div style="text-align: center; padding: 40px; color: #a0a0b8; font-style: italic;">No requests found</div>';
+        return;
+      }
+      
+      // Render each request
+      filteredRequests.forEach(req => {
+        renderDepartmentRequestCard(req, currentView === 'history');
+      });
+    }
+
+    function renderDepartmentRequestCard(req, isHistoryView = false) {
       // Only render if we're on the correct department page
       if (!currentDepartment || req.department !== currentDepartment) {
         return;
       }
 
-      const list = document.querySelector(`#${req.department.toLowerCase()}-requests .request-list`);
+      const list = document.getElementById(`${req.department.toLowerCase()}RequestList`);
       if (!list) return;
 
       const existing = document.getElementById(req.id);
-      if(existing) existing.remove();
+      if(existing) return; // Don't re-render if already exists
 
       const isEmergency = req.isEmergency || ['EMERGENCY', 'SECURITY_THREAT', 'MEDICAL_EMERGENCY'].includes(req.intent);
       const priority = req.priority || (isEmergency ? 'HIGH' : 'NORMAL');
       const card = document.createElement('div');
       card.className = `request-card department-${req.department}`;
       card.id = req.id;
+      
       if (isEmergency) {
         card.classList.add('emergency-request');
       }
+      
+      // Add status class if in history view
+      if (isHistoryView && req.status) {
+        card.classList.add(`status-${req.status}`);
+      }
+      
       const time = new Date(req.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const date = new Date(req.timestamp).toLocaleDateString();
       const emergencyIcon = isEmergency ? '🚨 ' : '';
       const priorityBadge = priority === 'HIGH' ? '<span class="priority-high">HIGH PRIORITY</span>' : '';
+      
+      // Status badge for history view
+      let statusBadge = '';
+      if (isHistoryView && req.status) {
+        const statusText = req.status === 'acknowledged' ? 'ACKNOWLEDGED' : 
+                          req.status === 'call_triggered' ? 'CALL TRIGGERED' : 
+                          'PENDING';
+        const statusClass = req.status === 'acknowledged' ? 'acknowledged' : 
+                           req.status === 'call_triggered' ? 'call_triggered' : '';
+        statusBadge = `<span class="history-status ${statusClass}">${statusText}</span>`;
+        
+        if (req.acknowledgedAt) {
+          const ackTime = new Date(req.acknowledgedAt).toLocaleString();
+          statusBadge += `<span style="font-size: 0.8em; color: #666; margin-left: 10px;">Ack: ${ackTime}</span>`;
+        }
+      }
+      
       card.innerHTML = `
           <div class="request-header">
               <div class="request-info">
                   <span class="request-room">${emergencyIcon}Room ${req.roomNumber || req.room.replace('room-', '')}</span>
                   ${priorityBadge}
               </div>
-              <span class="request-time">${time}</span>
+              <span class="request-time">${date} ${time}</span>
           </div>
           <p class="request-message ${isEmergency ? 'emergency-message' : ''}">${req.message}</p>
-          <div class="request-actions">
-              <button class="acknowledge-btn ${isEmergency ? 'emergency-ack' : ''}" data-id="${req.id}" ${isEmergency ? 'data-emergency="true"' : ''}>
-                  ${isEmergency ? '🚨 ACKNOWLEDGE EMERGENCY' : 'Acknowledge'}
-              </button>
+          <div class="request-actions" style="display: flex; justify-content: space-between; align-items: center;">
+              ${isHistoryView ? statusBadge : `
+                <button class="acknowledge-btn ${isEmergency ? 'emergency-ack' : ''}" data-id="${req.id}" ${isEmergency ? 'data-emergency="true"' : ''}>
+                    ${isEmergency ? '🚨 ACKNOWLEDGE EMERGENCY' : 'Acknowledge'}
+                </button>
+              `}
           </div>
       `;
-      if (isEmergency) {
+      
+      if (isEmergency && !isHistoryView) {
         list.insertBefore(card, list.firstChild);
       } else {
         list.appendChild(card);
