@@ -1,0 +1,3042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hotel Translation System</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e;min-height:100vh;padding:0;color:#ffffff}
+    .container{max-width:900px;margin:0 auto;background:transparent;border-radius:0;box-shadow:none;overflow:visible}
+    
+    /* UPDATED HEADER STYLES */
+    .header{
+      background:linear-gradient(135deg,#667eea,#764ba2);
+      color:#fff;
+      padding:40px;
+      text-align:center;
+      position:relative;
+      margin:0;
+      border-radius:0;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+      pointer-events: none;
+    }
+
+    .header-content {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #4299e1, #3182ce);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: 0 8px 32px rgba(66, 153, 225, 0.3);
+    }
+
+    .logo::before {
+      content: '';
+      position: absolute;
+      inset: 8px;
+      background: white;
+      border-radius: 6px;
+    }
+
+    .logo::after {
+      content: '';
+      position: absolute;
+      inset: 12px;
+      background: linear-gradient(135deg, #4299e1, #3182ce);
+      border-radius: 4px;
+      z-index: 1;
+    }
+
+    .qr-pattern {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 2px;
+      padding: 16px;
+    }
+
+    .qr-dot {
+      background: white;
+      border-radius: 1px;
+    }
+
+    .qr-dot:nth-child(1), .qr-dot:nth-child(2), .qr-dot:nth-child(5), .qr-dot:nth-child(9), .qr-dot:nth-child(10), .qr-dot:nth-child(13), .qr-dot:nth-child(16) {
+      background: white;
+    }
+    
+    .header h1{font-size:2.5em;font-weight:600;margin-bottom:10px;text-shadow:0 2px 4px rgba(0,0,0,0.1)}
+    .header p{font-size:1.2em;opacity:.9;font-weight:400}
+
+    .status-bar {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 30px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #48bb78;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    /* UPDATED ROLE SELECTOR STYLES */
+    .role-selector{padding:40px 20px;text-align:center;background:transparent;border:none;max-width:1000px;margin:0 auto}
+    .role-selector h3{font-size:2.2em;font-weight:600;color:#ffffff;margin-bottom:16px}
+    .role-selector p{font-size:1.1em;color:#a0a0b8;margin-bottom:40px;max-width:600px;margin-left:auto;margin-right:auto}
+    
+    .role-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;justify-content:center;margin-top:40px}
+    
+    .role-btn{
+      background:#2d2d54;
+      border-radius:20px;
+      padding:40px 32px;
+      cursor:pointer;
+      transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+      border:2px solid transparent;
+      position:relative;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      color:#ffffff;
+      font-size:1em;
+      font-weight:600;
+      outline:none;
+    }
+    
+    .role-btn::before{
+      content:'';
+      position:absolute;
+      top:0;
+      left:0;
+      right:0;
+      height:4px;
+      background:linear-gradient(90deg,#667eea,#764ba2)
+    }
+    
+    .role-btn:hover{
+      transform:translateY(-8px);
+      box-shadow:0 20px 40px rgba(102,126,234,0.2);
+      background:#363670;
+      border-color:rgba(102,126,234,0.3)
+    }
+    
+    .role-btn.active{
+      background:linear-gradient(135deg,#667eea,#764ba2);
+      transform:translateY(-4px);
+      box-shadow:0 15px 35px rgba(102,126,234,0.4)
+    }
+    
+    .role-btn.analytics{border-color:#ff6b6b}
+    .role-btn.analytics:hover{background:#4a4a7a;border-color:#10b981}
+    .role-btn.analytics.active{background:linear-gradient(135deg,#10b981,#059669)}
+    
+    .role-btn.staff{border-color:#4caf50}
+    .role-btn.staff:hover{background:#4a4a7a;border-color:#f59e0b}
+    .role-btn.staff.active{background:linear-gradient(135deg,#f59e0b,#d97706)}
+
+    .role-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    }
+
+    .role-btn.active .role-icon {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    .role-btn.analytics .role-icon {
+      background: linear-gradient(135deg, #10b981, #059669);
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+    }
+
+    .role-btn.staff .role-icon {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+    }
+
+    .role-title {
+      font-size: 1.5em;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #ffffff;
+    }
+
+    .role-description {
+      font-size: 0.95em;
+      color: #a0a0b8;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .role-btn.active .role-description {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(102, 126, 234, 0.15);
+      color: #8b9aff;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border: 1px solid rgba(102, 126, 234, 0.2);
+    }
+
+    .role-btn.active .role-badge {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .role-btn.analytics .role-badge {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .role-btn.staff .role-badge {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+    
+    /* Keep all existing styles for other components */
+    .main-content{padding:30px;display:none;position:relative;background:#1a1a2e;color:#ffffff}
+    .main-content.active{display:block}
+    .hotel-setup{text-align:center; padding-top: 40px;}
+    .hotel-input{width:100%;padding:15px;border:2px solid rgba(255,255,255,0.2);border-radius:10px;font-size:1.1em;margin:0;background:#2d2d54;color:#ffffff}
+    .hotel-input:focus{border-color:#667eea;outline:none}
+    .generate-btn{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;padding:12px 20px;border-radius:12px;font-size:1em;cursor:pointer;transition:transform .2s}
+    .generate-btn:hover{transform:translateY(-2px)}
+    .qr-container{margin:30px 0;padding:20px;background:#2d2d54;border-radius:15px;display:none;color:#ffffff;border:1px solid rgba(255,255,255,0.1)}
+    .qr-container.active{display:block}
+    .translation-interface{text-align:center;background:#2d2d54;padding:30px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);color:#ffffff}
+    .room-id{background:#3a3a68;padding:15px;border-radius:10px;margin-bottom:30px;font-family:monospace;font-size:1.2em;font-weight:700;color:#ffffff;border:1px solid rgba(255,255,255,0.1)}
+    .record-container{margin:30px 0}
+    .record-btn{width:120px;height:120px;border:none;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ee5a52);color:#fff;font-size:1.2em;cursor:pointer;transition:.3s;box-shadow:0 10px 20px rgba(255,107,107,.3)}
+    .record-btn:hover{transform:scale(1.05)}
+    .record-btn.recording{background:linear-gradient(135deg,#ff4757,#ff3838);animation:pulse 1s infinite}
+    @keyframes pulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.05);opacity:0.5}100%{transform:scale(1);opacity:1}}
+    .language-selector{margin:20px 0;}
+    .language-select{padding:10px 15px;border:2px solid #eee;border-radius:10px;font-size:1em;width:200px}
+    .text-input-container{margin-top:16px;display:flex;gap:10px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+    .text-input{width:100%;min-height:100px;padding:14px;border:2px solid rgba(255,255,255,0.2);border-radius:12px;font-size:1.1em;line-height:1.4;resize:vertical;background:#3a3a68;color:#ffffff}
+    .text-input:focus{border-color:#667eea;outline:none}
+    .send-btn{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;padding:12px 18px;border-radius:12px;cursor:pointer;font-weight:600}
+    .messages{max-height:400px;overflow-y:auto;border:1px solid rgba(255,255,255,0.1);border-radius:15px;padding:20px;margin:20px 0;background:#3a3a68}
+    .message{margin:15px 0;padding:15px;border-radius:12px;animation:slideIn .3s ease}
+    .message.guest{background:#e3f2fd;border-left:4px solid #2196f3}
+    .message.receptionist{background:#e8f5e8;border-left:4px solid #4caf50}
+    .message.assistant{background:linear-gradient(135deg,#f5f3ff,#e8e5ff);border-left:4px solid #667eea;position:relative;}
+    .message.assistant::before{content:"🤖 AI Assistant";position:absolute;top:5px;right:10px;font-size:0.75em;color:#667eea;opacity:0.7;}
+    .message-header{font-weight:700;margin-bottom:5px;color:#333;font-size:.9em}
+    .original-text{font-size:1.1em;margin-bottom:8px;color:#1a202c}
+    .translated-text{font-style:italic;color:#666}
+    @keyframes slideIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    .status{padding:10px;border-radius:8px;margin:10px 0;font-weight:500}
+    .status.success{background:#d4edda;color:#155724}
+    .status.error{background:#f8d7da;color:#721c24}
+    .status.info{background:#cce7ff;color:#004085}
+    .audio-controls{margin-top:15px;display:flex;align-items:center;justify-content:center;gap:15px}
+    .play-btn{background:linear-gradient(135deg,#2196f3,#1976d2);color:#fff;border:none;padding:8px 12px;border-radius:20px;font-size:.9em;cursor:pointer}
+    .connection-status{position:fixed;top:20px;right:20px;padding:8px 15px;border-radius:20px;font-size:.9em;font-weight:700;z-index:1000}
+    .connection-status.connected{background:#4caf50;color:#fff}
+    .connection-status.disconnected{background:#ff4757;color:#fff}
+    .rooms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+    .room-card{border:2px solid #444;border-radius:12px;padding:14px;text-align:center;background:#2d2d54;transition:.2s;color:#ffffff}
+    .room-card.active{border-color:#4caf50;background:#3a5f3a}
+    .room-title{font-weight:700;margin-bottom:8px}
+    .badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;color:#fff}
+    .badge.on{background:#4caf50}
+    .badge.off{background:#f44336}
+    .rooms-btn{padding:8px 12px;border:none;border-radius:8px;background:#667eea;color:#fff;cursor:pointer;width:100%;margin-top:8px}
+    .rooms-btn.alt{background:#f44336}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
+    .toolbar button{padding:8px 12px;border:none;border-radius:8px;color:#fff;cursor:pointer}
+    .btn-green{background:#4caf50}
+    .btn-red{background:#f44336}
+    .search{padding:8px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;min-width:220px;background:#2d2d54;color:#ffffff}
+    .search:focus{border-color:#667eea;outline:none}
+
+    /* UPDATED ANALYTICS DASHBOARD - 2x2 GRID */
+    .analytics-dashboard{
+      max-width:1200px;
+      margin:0 auto;
+      padding-top: 40px;
+      background: #2d2d54;
+      border-radius: 20px;
+      padding: 30px;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #ffffff;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 20px;
+      height: calc(100vh - 300px);
+      margin-top: 20px;
+      min-height: 600px;
+    }
+
+    .dashboard-card {
+      background: #3a3a68;
+      border-radius: 15px;
+      padding: 25px;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dashboard-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+
+    .dashboard-card h3 {
+      color: #ffffff;
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .table-container {
+      overflow-x: auto;
+      flex: 1;
+      max-height: calc(100% - 60px);
+    }
+
+    .table-container table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table-container th {
+      background: rgba(255,255,255,0.05);
+      color: #a0a0b8;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid rgba(255,255,255,0.1);
+    }
+
+    .table-container td {
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      color: #ffffff;
+    }
+
+    .table-container tbody tr:hover {
+      background: rgba(255,255,255,0.05);
+    }
+
+    .kpi-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .kpi-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+    }
+
+    .kpi-label {
+      color: #a0a0b8;
+      font-weight: 500;
+    }
+
+    .kpi-value {
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: #10b981;
+      color: white;
+    }
+
+    #activeRooms {
+      color: #a0a0b8;
+      text-align: center;
+      padding: 40px 20px;
+      font-style: italic;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .room-activity-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .room-activity-item {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .room-activity-item:last-child {
+      border-bottom: none;
+    }
+
+    .live-indicator{display:inline-block;padding:5px 15px;background:#4caf50;color:white;border-radius:20px;font-size:14px;animation:pulse 2s infinite;margin-left:20px}
+    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin-bottom:20px}
+    .metric-card{background:#3a3a68;border-radius:15px;padding:25px;box-shadow:0 5px 20px rgba(0,0,0,0.1);position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.1)}
+    .metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#667eea,#764ba2)}
+    .metric-value{font-size:36px;font-weight:bold;color:#ffffff;margin-bottom:5px}
+    .metric-label{color:#a0a0b8;font-size:14px;text-transform:uppercase;letter-spacing:1px}
+    .metric-trend{position:absolute;top:25px;right:25px;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:bold}
+    .trend-up{background:#e8f5e9;color:#4caf50}
+    .trend-down{background:#ffebee;color:#f44336}
+    .export-btn{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;padding:10px 20px;border-radius:10px;cursor:pointer;float:right;margin-bottom:20px}
+    .export-btn:hover{transform:translateY(-2px)}
+    .back-btn {position: absolute;top: 20px;left: 30px;background: #f0f2f5;border: 1px solid #dadde1;color: #4b4f56;padding: 8px 16px;border-radius: 20px;cursor: pointer;font-weight: 600;font-size: 0.9em;transition: background-color .2s;z-index: 10;}
+    .back-btn:hover {background-color: #e4e6e9;}
+    .requests-dashboard { padding-top: 40px; background: #2d2d54; border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.1); margin: 0; }
+    .dashboard-header { text-align: center; margin-bottom: 20px; color: #ffffff; }
+    .enable-notifications-btn { background-color: #007bff; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; border: none; font-size: 1em; }
+    .enable-notifications-btn:disabled { background-color: #cccccc; cursor: not-allowed; }
+    .department-section { margin-bottom: 30px; background: #3a3a68; padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
+    .department-title { font-size: 1.5em; font-weight: 600; color: #ffffff; padding-bottom: 10px; border-bottom: 2px solid rgba(255,255,255,0.1); margin-bottom: 15px; }
+    .request-list { display: flex; flex-direction: column; gap: 15px; }
+    .request-card { background-color: #ffffff; border: 1px solid #ddd; border-left: 5px solid #667eea; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); animation: slideIn .3s ease; color: #1a202c; }
+    .request-card.department-Restaurant { border-left-color: #ff9800; }
+    .request-card.department-Housekeeping { border-left-color: #2196f3; }
+    .request-card.department-Security { border-left-color: #f44336; }
+    .request-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .request-room { font-size: 1.2em; font-weight: 700; color: #1a202c; }
+    .request-time { font-size: 0.9em; color: #666; }
+    .request-message { font-size: 1.1em; color: #4a5568; margin-bottom: 15px; }
+    .request-actions { text-align: right; }
+    .acknowledge-btn { background-color: #4caf50; color: white; border: none; padding: 8px 16px; border-radius: 5px; font-weight: 600; cursor: pointer; transition: background-color .2s; }
+    .acknowledge-btn:hover { background-color: #45a049; }
+    /* EMERGENCY STYLES */
+    @keyframes emergencyPulse {
+      0% { box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3); }
+      50% { box-shadow: 0 4px 20px rgba(220, 53, 69, 0.6); }
+      100% { box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3); }
+    }
+    .emergency-request {
+      position: relative;
+      z-index: 100;
+      border: 3px solid #dc3545 !important;
+      background: linear-gradient(135deg, #fff5f5, #ffe6e6) !important;
+      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3) !important;
+      animation: emergencyPulse 2s infinite;
+      order: -1; /* Show at top */
+    }
+    .emergency-message {
+      font-weight: bold;
+      color: #dc3545;
+    }
+    .priority-high {
+      background: #dc3545;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: bold;
+      animation: pulse 1s infinite;
+    }
+    .emergency-ack {
+      background: #dc3545 !important;
+      color: white !important;
+      font-weight: bold;
+      animation: pulse 2s infinite;
+    }
+    .emergency-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+    .emergency-modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      border: 3px solid #dc3545;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      max-width: 500px;
+      text-align: center;
+      animation: emergencyPulse 2s infinite;
+    }
+    .emergency-header h2 {
+      color: #dc3545;
+      margin: 0 0 10px 0;
+      font-size: 1.8em;
+    }
+    .emergency-room {
+      background: #dc3545;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+    }
+    .emergency-acknowledge {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 1.1em;
+      cursor: pointer;
+      margin: 10px;
+    }
+    .emergency-close {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px;
+    }
+    /* NEW STYLES FOR REQUEST HISTORY */
+    .clickable-department {
+      cursor: pointer;
+      transition: background-color 0.2s;
+      padding: 10px;
+      border-radius: 8px;
+      color: #ffffff;
+    }
+    .clickable-department:hover {
+      background-color: rgba(102, 126, 234, 0.2);
+    }
+    .history-indicator {
+      font-size: 0.7em;
+      opacity: 0.6;
+      font-weight: normal;
+      color: #a0a0b8;
+    }
+    .history-modal {
+      position: fixed;
+      z-index: 2000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .history-modal-content {
+      background-color: white;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+    .history-modal-header {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .history-modal-header h2 {
+      margin: 0;
+    }
+    .history-close {
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .history-close:hover {
+      opacity: 0.7;
+    }
+    .history-filters {
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    .history-filters select {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .export-history-btn {
+      background: #4caf50;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .export-history-btn:hover {
+      background: #45a049;
+    }
+    .history-stats {
+      padding: 15px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #eee;
+    }
+    .history-content {
+      padding: 20px;
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+    .history-request-card {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-left: 4px solid #667eea;
+    }
+    .history-request-card.status-acknowledged {
+      border-left-color: #4caf50;
+    }
+    .history-request-card.status-call_triggered {
+      border-left-color: #ff9800;
+    }
+    .history-request-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .history-room-number {
+      font-weight: bold;
+      color: #333;
+    }
+    .history-timestamp {
+      font-size: 0.9em;
+      color: #666;
+    }
+    .history-message {
+      font-size: 1.1em;
+      color: #555;
+      margin-bottom: 10px;
+    }
+    .history-status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .history-status.acknowledged {
+      background: #e8f5e8;
+      color: #2e7d32;
+    }
+    .history-status.call_triggered {
+      background: #fff3e0;
+      color: #ef6c00;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    .no-history {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .stat-item {
+      text-align: center;
+      padding: 10px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #eee;
+    }
+    .stat-number {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #333;
+    }
+    .stat-label {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    /* ============ MODERN GUEST INTERFACE STYLES ============ */
+    .modern-guest-interface {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-height: 800px;
+      background: #f5f7fa;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      position: relative;
+      margin: -30px;
+      border-radius: 20px;
+      overflow: hidden;
+      color: #1a202c;
+    }
+
+    .chat-header {
+      background: white;
+      padding: 20px;
+      border-bottom: 1px solid #e1e8ed;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .room-info h2 {
+      font-size: 1.5em;
+      font-weight: 600;
+      color: #1a202c;
+      margin: 0;
+    }
+
+    .welcome-text {
+      color: #718096;
+      font-size: 0.9em;
+      margin: 2px 0 0 0;
+    }
+
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 15px;
+      font-size: 0.8em;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-badge.connected {
+      background: #48bb78;
+      color: white;
+    }
+
+    .status-badge.disconnected {
+      background: #f56565;
+      color: white;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #f5f7fa;
+    }
+
+    .ai-greeting {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      animation: slideInUp 0.5s ease;
+    }
+
+    .ai-avatar {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2em;
+      flex-shrink: 0;
+    }
+
+    .message-bubble {
+      background: white;
+      padding: 14px 18px;
+      border-radius: 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: relative;
+      max-width: 80%;
+      animation: slideInUp 0.3s ease;
+    }
+
+    .message-bubble.ai-message {
+      border-bottom-left-radius: 6px;
+    }
+
+    .message-bubble.user-message {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border-bottom-right-radius: 6px;
+      margin-left: auto;
+    }
+
+    .message-container.user {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 15px;
+    }
+
+    .message-bubble p {
+      margin: 0;
+      line-height: 1.4;
+      font-size: 1em;
+    }
+
+    .message-time {
+      font-size: 0.75em;
+      color: #a0aec0;
+      margin-top: 6px;
+      display: block;
+    }
+
+    .user-message .message-time {
+      color: rgba(255,255,255,0.7);
+    }
+
+    .status-indicators {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 20px 0;
+      padding: 15px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9em;
+      color: #4a5568;
+    }
+
+    .status-icon {
+      font-weight: bold;
+    }
+
+    .status-icon.delivered {
+      color: #48bb78;
+    }
+
+    .status-icon.ready {
+      color: #ed8936;
+      animation: pulse 2s infinite;
+    }
+
+    .translation-trigger {
+      padding: 0 20px 20px;
+    }
+
+    .globe-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #4299e1, #3182ce);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+    }
+
+    .globe-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(66, 153, 225, 0.4);
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 0 20px 20px;
+    }
+
+    .action-btn {
+      padding: 12px 8px;
+      border: 2px solid #e2e8f0;
+      background: white;
+      border-radius: 10px;
+      font-size: 0.85em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: #4a5568;
+    }
+
+    .action-btn:hover {
+      border-color: #667eea;
+      background: #f7fafc;
+      transform: translateY(-1px);
+    }
+
+    .action-btn.reception { border-color: #fbb6ce; }
+    .action-btn.housekeeping { border-color: #9decf9; }
+    .action-btn.room-service { border-color: #faf089; }
+
+    .message-input-area {
+      display: flex;
+      gap: 12px;
+      padding: 20px;
+      background: white;
+      border-top: 1px solid #e2e8f0;
+      align-items: flex-end;
+    }
+
+    .message-input-area textarea {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 20px;
+      font-size: 1em;
+      line-height: 1.4;
+      resize: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      color: #1a202c;
+      background: white;
+    }
+
+    .message-input-area textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover {
+      transform: scale(1.05);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Translation Modal */
+    .translation-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .translation-modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      width: 90%;
+      max-width: 480px;
+      max-height: 80vh;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      color: #1a202c;
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.3em;
+    }
+
+    /* Improved Connection Status - REMOVED */
+    
+    .status-text {
+      color: #4a5568;
+      font-weight: 500;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.8em;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    .close-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .language-selection {
+      padding: 25px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .language-selection label {
+      display: block;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 10px;
+    }
+
+    .language-dropdown {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 1em;
+      background: white;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      color: #1a202c;
+    }
+
+    .language-dropdown:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .voice-controls {
+      padding: 25px;
+      text-align: center;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .voice-btn {
+      width: 120px;
+      height: 120px;
+      border: none;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #48bb78, #38a169);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin: 0 auto 15px;
+      box-shadow: 0 8px 25px rgba(72, 187, 120, 0.3);
+    }
+
+    .voice-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 12px 30px rgba(72, 187, 120, 0.4);
+    }
+
+    .voice-btn.recording {
+      background: linear-gradient(135deg, #f56565, #e53e3e);
+      animation: recordingPulse 1s infinite;
+    }
+
+    .voice-icon {
+      font-size: 2em;
+    }
+
+    .voice-text {
+      font-size: 0.9em;
+      font-weight: 600;
+    }
+
+    .voice-instruction {
+      color: #718096;
+      font-size: 0.9em;
+      margin: 0;
+    }
+
+    /* Transcript Section - FIXED VERSION */
+    .transcript-section {
+      background: #f8f9fa;
+      border-top: 1px solid #e2e8f0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .transcript-header {
+      padding: 15px 20px;
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      color: #4a5568;
+      transition: background 0.2s;
+    }
+
+    .transcript-header:hover {
+      background: #f8f9fa;
+    }
+
+    .expand-icon {
+      font-size: 0.8em;
+      color: #718096;
+      transition: transform 0.2s;
+    }
+
+    .transcript-section.expanded .expand-icon {
+      transform: rotate(180deg);
+    }
+
+    .transcript-content {
+      flex: 1;
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.3s ease;
+    }
+
+    /* FIXED: Added overflow-y: auto when expanded */
+    .transcript-section.expanded .transcript-content {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .transcript-messages {
+      padding: 15px;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .transcript-message {
+      margin-bottom: 15px;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .transcript-message.user {
+      border-left-color: #48bb78;
+    }
+
+    .transcript-message.assistant {
+      border-left-color: #f56565;
+    }
+
+    .transcript-speaker {
+      font-weight: 600;
+      color: #4a5568;
+      font-size: 0.85em;
+      margin-bottom: 4px;
+    }
+
+    .transcript-text {
+      color: #2d3748;
+      line-height: 1.4;
+    }
+
+    .transcript-time {
+      font-size: 0.75em;
+      color: #a0aec0;
+      margin-top: 6px;
+    }
+
+    .status-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      font-weight: 600;
+      z-index: 2000;
+      display: none;
+    }
+
+    .status-overlay.show {
+      display: block;
+    }
+
+    /* Hide original guest interface when modern is active */
+    .modern-guest-interface ~ .translation-interface {
+      display: none;
+    }
+
+    /* Animations */
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes recordingPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    /* Mobile responsive adjustments */
+    @media(max-width:768px){ 
+      .dashboard-grid{grid-template-columns:1fr;grid-template-rows:repeat(4,1fr)} 
+      .back-btn { top: 15px; left: 15px; }
+      .chat-header { padding: 15px; }
+      .chat-messages { padding: 15px; }
+      .quick-actions { padding: 0 15px 15px; }
+      .message-input-area { padding: 15px; }
+      .modal-content { width: 95%; margin: 20px; }
+      .voice-btn { width: 100px; height: 100px; }
+      .transcript-content { max-height: 250px; }
+      .role-buttons{grid-template-columns:1fr;gap:16px}
+      .status-bar{flex-direction:column;gap:15px}
+      .header{padding:30px 20px}
+      .header h1{font-size:2em}
+    }
+  </style>
+</head>
+<body>
+  <div class="connection-status" id="connectionStatus">Disconnected</div>
+  <div class="container">
+    <div class="header">
+      <div class="header-content">
+        <div class="logo-section">
+          <div class="logo">
+            <div class="qr-pattern">
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+              <div class="qr-dot"></div>
+            </div>
+          </div>
+          <div>
+            <h1>Multilingual AI Room Assistant</h1>
+            <p>Real-time communication across languages</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="role-selector" id="roleSelector">
+      <h3>Select Your Role</h3>
+      <p>Choose your access level to get started with the multilingual assistant platform</p>
+      <div class="role-buttons">
+        <button class="role-btn" id="adminBtn" onclick="selectRole('admin', this)">
+          <div class="role-icon">🛠️</div>
+          <div class="role-title">Admin</div>
+          <div class="role-description">
+            Manage system settings, room configurations, and user permissions. Access comprehensive analytics and system controls.
+          </div>
+          <div class="role-badge">Full Access</div>
+        </button>
+        <button class="role-btn analytics" id="analyticsBtn" onclick="selectRole('analytics', this)">
+          <div class="role-icon">📊</div>
+          <div class="role-title">Analytics</div>
+          <div class="role-description">
+            View detailed performance metrics, translation statistics, and usage analytics. Monitor system health and trends.
+          </div>
+          <div class="role-badge">Live Data</div>
+        </button>
+        <button class="role-btn staff" id="staffBtn" onclick="selectRole('staff', this)">
+          <div class="role-icon">👥</div>
+          <div class="role-title">Staff Requests</div>
+          <div class="role-description">
+            Handle real-time guest requests, manage department communications, and coordinate service responses.
+          </div>
+          <div class="role-badge">Active</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Keep all existing content sections exactly as they were -->
+    <div class="main-content" id="staffContent">
+      <button class="back-btn" onclick="goBackToRoleSelector()">← Back to Roles</button>
+      <div class="requests-dashboard">
+        <div class="dashboard-header">
+            <h2>Live Service Requests</h2>
+            <button class="enable-notifications-btn" id="enableNotificationsBtn">Enable Notifications</button>
+            <button class="enable-notifications-btn" style="background-color: #dc3545;" onclick="fetch('/api/push/test',{method:'POST'})">Send Test Push</button>
+        </div>
+        
+        <div id="department-Receptionist" class="department-section">
+          <h3 class="department-title clickable-department" onclick="showDepartmentHistory('Receptionist')">
+            🛎️ Receptionist <span class="history-indicator">(Click to view history)</span>
+          </h3>
+          <div class="request-list"></div>
+        </div>
+        
+        <div id="department-Restaurant" class="department-section">
+          <h3 class="department-title clickable-department" onclick="showDepartmentHistory('Restaurant')">
+            🍔 Restaurant <span class="history-indicator">(Click to view history)</span>
+          </h3>
+          <div class="request-list"></div>
+        </div>
+        
+        <div id="department-Housekeeping" class="department-section">
+          <h3 class="department-title clickable-department" onclick="showDepartmentHistory('Housekeeping')">
+            🧹 Housekeeping <span class="history-indicator">(Click to view history)</span>
+          </h3>
+          <div class="request-list"></div>
+        </div>
+        
+        <div id="department-Security" class="department-section">
+          <h3 class="department-title clickable-department" onclick="showDepartmentHistory('Security')">
+            🛡️ Security <span class="history-indicator">(Click to view history)</span>
+          </h3>
+          <div class="request-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPDATED ANALYTICS CONTENT -->
+    <div class="main-content" id="analyticsContent">
+      <button class="back-btn" onclick="goBackToRoleSelector()">← Back to Roles</button>
+      <div class="analytics-dashboard">
+        <div style="margin-bottom:30px;">
+          <h2 style="display:inline-block">System Analytics</h2>
+          <span class="live-indicator">● LIVE DATA</span>
+          <button class="export-btn" onclick="exportAnalytics()">📊 Export Report</button>
+          <div style="clear:both"></div>
+          <span id="lastUpdate" style="color:#666;font-size:14px;"></span>
+        </div>
+        
+        <!-- Overview Metrics -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-value" id="todayTranslations">0</div>
+            <div class="metric-label">Translations Today</div>
+            <div class="metric-trend trend-up" id="translationTrend">+0%</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="activeRooms">0</div>
+            <div class="metric-label">Active Rooms</div>
+            <div class="metric-trend trend-up" id="roomTrend">+0%</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="aiRequests">0</div>
+            <div class="metric-label">AI Requests</div>
+            <div class="metric-trend trend-up" id="aiTrend">+0%</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="callsTriggered">0</div>
+            <div class="metric-label">Service Calls Made</div>
+            <div class="metric-trend" id="callTrend">+0%</div>
+          </div>
+        </div>
+
+        <!-- 2x2 Dashboard Grid -->
+        <div class="dashboard-grid">
+          
+          <!-- Most Active Rooms (Top Left) -->
+          <div class="dashboard-card">
+            <h3>Most Active Rooms</h3>
+            <div id="activeRoomsSection">
+              <div id="roomListAnalytics">No activity yet</div>
+            </div>
+          </div>
+
+          <!-- Service Request Types Table (Top Right) -->
+          <div class="dashboard-card">
+            <h3>Service Request Types</h3>
+            <div class="table-container">
+              <table id="serviceRequestTypesTable">
+                <thead>
+                  <tr>
+                    <th>Request Type</th>
+                    <th>Count</th>
+                    <th>Call Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="3" style="text-align: center; font-style: italic; color: #888;">No data yet</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Key Performance Indicators (Bottom Left) -->
+          <div class="dashboard-card">
+            <h3>Key Performance Indicators</h3>
+            <div class="kpi-list">
+              <div class="kpi-item">
+                <span class="kpi-label">Average Response Time</span>
+                <span class="kpi-value" id="avgResponseTime">&lt; 2 seconds</span>
+              </div>
+              <div class="kpi-item">
+                <span class="kpi-label">Translation Accuracy</span>
+                <span class="kpi-value" id="translationAccuracy">98.5%</span>
+              </div>
+              <div class="kpi-item">
+                <span class="kpi-label">System Uptime</span>
+                <span class="kpi-value" id="systemUptime">99.9%</span>
+              </div>
+              <div class="kpi-item">
+                <span class="kpi-label">Total Translations</span>
+                <span class="kpi-value" id="totalTranslations">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Calls by Department Table (Bottom Right) -->
+          <div class="dashboard-card">
+            <h3>Calls by Department</h3>
+            <div class="table-container">
+              <table id="departmentCallsTable">
+                <thead>
+                  <tr>
+                    <th>Department</th>
+                    <th>Calls Received</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="2" style="text-align: center; font-style: italic; color: #888;">No calls yet</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content" id="adminContent">
+      <button class="back-btn" onclick="goBackToRoleSelector()">← Back to Roles</button>
+      <div class="hotel-setup">
+        <h3>Hotel Admin Panel</h3>
+        <div style="display:flex;gap:10px;margin-bottom:20px;">
+          <input type="text" id="hotelName" class="hotel-input" placeholder="Enter hotel name" style="flex:1;" />
+          <input type="text" id="roomNumber" class="hotel-input" placeholder="Room # (e.g., 301)" style="width:150px;" />
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button class="generate-btn" onclick="generateQR()">Generate Room QR</button>
+          <button class="generate-btn" style="background:#4caf50" onclick="initializePermanentRooms()">Create Rooms 301-350</button>
+        </div>
+        <div class="qr-container" id="qrContainer">
+          <h4>Scan QR Code</h4>
+          <div id="qrCode"></div>
+          <p><strong>Room ID:</strong> <span id="generatedRoomId"></span></p>
+          <p><strong>Guest URL:</strong> <a href="#" id="guestUrlLink" target="_blank"><span id="guestUrl"></span></a></p>
+        </div>
+      </div>
+      <div class="qr-container" id="roomsBlock" style="display:block">
+        <h4>Room Management</h4>
+        <div class="toolbar">
+          <button class="btn-green" onclick="activateAllRooms()">Activate All Rooms</button>
+          <button class="btn-red" onclick="deactivateAllRooms()">Deactivate All Rooms</button>
+          <input class="search" id="roomSearch" placeholder="Search room number..." onkeyup="filterRooms()"/>
+        </div>
+        <div id="roomsGrid" class="rooms-grid"></div>
+      </div>
+    </div>
+
+    <!-- MODIFIED GUEST CONTENT WITH MODERN INTERFACE -->
+    <div class="main-content" id="guestContent">
+      <div class="modern-guest-interface">
+        <!-- Header -->
+        <div class="chat-header">
+          <div class="room-info">
+            <h2 id="modernGuestRoomId">Room 301</h2>
+            <p class="welcome-text">Welcome, Guest</p>
+          </div>
+          <div class="connection-indicator">
+            <span class="status-badge connected" id="guestConnectionStatus">
+              Connected
+            </span>
+          </div>
+        </div>
+
+        <!-- Chat Messages Area -->
+        <div class="chat-messages" id="modernGuestMessages">
+          <div class="ai-greeting">
+            <div class="ai-avatar">🤖</div>
+            <div class="message-bubble ai-message">
+              <p>Hello! Welcome to your AI room assistant. How can I help you today?</p>
+              <span class="message-time" id="greetingTime">11:01 AM</span>
+            </div>
+          </div>
+          <div class="status-indicators">
+            <div class="status-item">
+              <span class="status-icon delivered">✓</span>
+              <span class="status-text">Delivered</span>
+            </div>
+            <div class="status-item">
+              <span class="status-icon ready">●</span>
+              <span class="status-text">Ready to assist</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Translation Button -->
+        <div class="translation-trigger">
+          <button class="globe-btn" onclick="openTranslationModal()">
+            🌐 Tap here for translation
+          </button>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+          <button class="action-btn reception" onclick="sendQuickRequest('reception')">
+            🛎️ Reception
+          </button>
+          <button class="action-btn housekeeping" onclick="sendQuickRequest('housekeeping')">
+            🧹 Housekeeping
+          </button>
+          <button class="action-btn room-service" onclick="sendQuickRequest('room-service')">
+            🍽️ Room Service
+          </button>
+        </div>
+
+        <!-- Message Input -->
+        <div class="message-input-area">
+          <textarea 
+            id="modernGuestTextInput" 
+            placeholder="Type your message or use quick actions above..."
+            rows="2"
+          ></textarea>
+          <button class="send-btn" id="modernGuestSendBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22,2 15,22 11,13 2,9"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Translation Modal -->
+      <div class="translation-modal" id="translationModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Translation</h3>
+            <button class="close-btn" onclick="closeTranslationModal()">&times;</button>
+          </div>
+          
+          <div class="language-selection">
+            <label>Your Language</label>
+            <select id="modernGuestLanguage" class="language-dropdown">
+              <option value="" disabled selected>Select Language</option>
+              <option value="en-US">English</option>
+              <option value="hi-IN">Hindi</option>
+              <option value="bn-IN">Bengali</option>
+              <option value="ta-IN">Tamil</option>
+              <option value="te-IN">Telugu</option>
+              <option value="mr-IN">Marathi</option>
+              <option value="gu-IN">Gujarati</option>
+              <option value="kn-IN">Kannada</option>
+              <option value="ml-IN">Malayalam</option>
+              <option value="pa-IN">Punjabi</option>
+              <option value="or-IN">Odia</option>
+              <option value="es-ES">Spanish</option>
+              <option value="de-DE">German</option>
+              <option value="fr-FR">French</option>
+            </select>
+          </div>
+
+          <div class="voice-controls">
+            <button class="voice-btn" id="modernGuestRecordBtn" onclick="toggleModernRecording()">
+              <div class="voice-icon">🎤</div>
+              <span class="voice-text">Start Voice Translation</span>
+            </button>
+            <p class="voice-instruction" id="voiceInstructionText">Waiting for staff connection...</p>
+          </div>
+
+          <!-- Transcript Section -->
+          <div class="transcript-section" id="transcriptSection" style="display: none;">
+            <div class="transcript-header" onclick="toggleTranscript()">
+              <span>Transcript</span>
+              <div class="expand-icon" id="transcriptExpandIcon">▼</div>
+            </div>
+            <div class="transcript-content" id="transcriptContent">
+              <div class="transcript-messages" id="transcriptMessages">
+                <!-- Transcript messages will be added here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status messages -->
+      <div id="modernGuestStatus" class="status-overlay"></div>
+
+      <!-- Original Guest Interface (hidden when modern is active) -->
+      <div class="translation-interface">
+        <h3>Guest Interface</h3>
+        <div class="room-id">Room: <span id="guestRoomId">-</span></div>
+        <div class="language-selector">
+          <label for="guestLanguage">Your Language for Voice Translation:</label>
+          <select id="guestLanguage" class="language-select">
+            <option value="" disabled selected>Select Your Language...</option>
+            <option value="hi-IN">Hindi (हिन्दी)</option><option value="bn-IN">Bengali (বাংলা)</option>
+            <option value="ta-IN">Tamil (தமிழ்)</option><option value="te-IN">Telugu (తెలుగు)</option>
+            <option value="mr-IN">Marathi (मराठी)</option><option value="gu-IN">Gujarati (ગુજરાતી)</option>
+            <option value="kn-IN">Kannada (ಕನ್ನಡ)</option><option value="ml-IN">Malayalam (മലയാളം)</option>
+            <option value="pa-IN">Punjabi (ਪੰਜਾਬੀ)</option><option value="or-IN">Odia (ଓଡ଼ିଆ)</option>
+            <option value="es-ES">Spanish</option><option value="de-DE">German</option><option value="fr-FR">French</option>
+            <option value="en-US">English</option>
+          </select>
+        </div>
+        <div class="record-container">
+          <button class="record-btn" id="guestRecordBtn" onclick="toggleRecording('guest')">Speak for Translation</button>
+        </div>
+        <div class="text-input-container">
+          <h4 style="width: 100%; text-align: center; margin-bottom: 10px; color: #555;">Your AI Room Assistant</h4>
+          <textarea id="guestTextInput" class="text-input" placeholder="Order towels..."></textarea>
+          <button class="send-btn" id="guestSendBtn">Send to AI</button>
+        </div>
+        <div id="guestStatus"></div>
+        <div class="messages" id="guestMessages"></div>
+      </div>
+    </div>
+
+    <div class="main-content" id="receptionistContent">
+      <div class="translation-interface">
+        <h3 style="color:#ffffff">Staff Interface</h3>
+        <div class="room-id">Room: <span id="receptionistRoomId">-</span></div>
+        <div class="record-container">
+          <button class="record-btn" id="receptionistRecordBtn" onclick="toggleRecording('receptionist')">Speak (English)</button>
+        </div>
+        <div class="text-input-container">
+          <textarea id="receptionistTextInput" class="text-input" placeholder="Type your response in English..."></textarea>
+          <button class="send-btn" id="receptionistSendBtn">Send</button>
+        </div>
+        <div id="receptionistStatus"></div>
+        <div class="messages" id="receptionistMessages"></div>
+      </div>
+    </div>
+  </div>
+  <div id="historyModal" class="history-modal" style="display: none;">
+    <div class="history-modal-content">
+      <div class="history-modal-header">
+        <h2 id="historyModalTitle">Department History</h2>
+        <span class="history-close" onclick="closeHistoryModal()">&times;</span>
+      </div>
+      <div class="history-filters">
+        <select id="historyDaysFilter" onchange="refreshDepartmentHistory()">
+          <option value="1">Last 1 day</option>
+          <option value="3">Last 3 days</option>
+          <option value="7" selected>Last 7 days</option>
+          <option value="30">Last 30 days</option>
+        </select>
+        <button class="export-history-btn" onclick="exportDepartmentHistory()">📁 Export</button>
+      </div>
+      <div class="history-stats" id="historyStats"></div>
+      <div class="history-content" id="historyContent">
+        <div class="loading">Loading history...</div>
+      </div>
+    </div>
+  </div>
+  <div id="emergencyModal" class="emergency-modal" style="display: none;">
+    <div class="emergency-modal-content">
+      <div class="emergency-header">
+        <h2>🚨 EMERGENCY ALERT</h2>
+        <span class="emergency-room" id="emergencyRoom">Room ---</span>
+      </div>
+      <div class="emergency-details">
+        <p><strong>Department:</strong> <span id="emergencyDepartment">---</span></p>
+        <p><strong>Message:</strong> <span id="emergencyMessage">---</span></p>
+        <p><strong>Time:</strong> <span id="emergencyTime">---</span></p>
+      </div>
+      <div class="emergency-actions">
+        <button class="emergency-acknowledge" id="emergencyAcknowledgeBtn">
+          🚨 ACKNOWLEDGE & RESPOND
+        </button>
+        <button class="emergency-close" onclick="closeEmergencyModal()">
+          View in Queue
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- UPDATED JAVASCRIPT -->
+  <script>
+    const MIN_MS = 1000, MAX_MS = 15000;
+    let socket = null, currentRole = null, currentRoom = null, pendingRoomFromQR = null;
+    let analyticsInterval = null;
+    let currentDepartment = null;
+    
+    // Modern Guest Interface Variables
+    let isRecording = false;
+    let currentLanguage = 'en-US';
+    let transcriptExpanded = false;
+    let transcriptMessages = [];
+    let staffConnected = false; // Track staff connection
+
+    function updateConnectionStatus(ok){
+      const el = document.getElementById('connectionStatus');
+      el.textContent = ok ? 'Connected' : 'Disconnected';
+      el.className = 'connection-status ' + (ok ? 'connected' : 'disconnected');
+      
+      // Update modern interface connection status
+      updateModernConnectionStatus(ok);
+    }
+
+    function updateModernConnectionStatus(connected) {
+      const statusEl = document.getElementById('guestConnectionStatus');
+      if (statusEl) {
+        statusEl.textContent = connected ? 'Connected' : 'Disconnected';
+        statusEl.className = `status-badge ${connected ? 'connected' : 'disconnected'}`;
+      }
+
+      // Update voice button based on staff connection
+      updateVoiceButtonState();
+    }
+
+    function updateVoiceButtonState() {
+      const voiceBtn = document.getElementById('modernGuestRecordBtn');
+      const instructionText = document.getElementById('voiceInstructionText');
+      
+      if (voiceBtn && instructionText) {
+        if (staffConnected && socket && socket.connected) {
+          voiceBtn.disabled = false;
+          voiceBtn.style.opacity = '1';
+          voiceBtn.style.cursor = 'pointer';
+          const selectedLang = document.getElementById('modernGuestLanguage')?.value;
+          if (selectedLang) {
+            const langName = document.getElementById('modernGuestLanguage')?.options[document.getElementById('modernGuestLanguage').selectedIndex]?.text || 'your language';
+            instructionText.textContent = `Speak in ${langName} and we'll translate to English`;
+          } else {
+            instructionText.textContent = 'Please select your language first';
+          }
+        } else {
+          voiceBtn.disabled = true;
+          voiceBtn.style.opacity = '0.5';
+          voiceBtn.style.cursor = 'not-allowed';
+          if (!socket || !socket.connected) {
+            instructionText.textContent = 'Connecting to server...';
+          } else {
+            instructionText.textContent = 'Waiting for hotel staff to connect...';
+          }
+        }
+      }
+    }
+
+    function initSocket(){
+      socket = io();
+      socket.on('connect', () => {
+        updateConnectionStatus(true);
+        if (currentRole === 'staff') { socket.emit('join_room', { role: 'staff' }); }
+        else if (currentRoom && currentRole && currentRole !== 'analytics') {
+          const lang = document.getElementById('modernGuestLanguage')?.value || document.getElementById('guestLanguage')?.value || 'en-US';
+          socket.emit('join_room', { room: currentRoom, role: currentRole, language: lang });
+        }
+      });
+      socket.on('disconnect', () => {
+        updateConnectionStatus(false);
+        staffConnected = false;
+        updateVoiceButtonState();
+      });
+      socket.on('translation', handleTranslation);
+      socket.on('room_joined', d => {
+        showStatus(currentRole, `Connected to room: ${d.room}`,'success');
+        if (currentRole === 'guest' && d.staffCount && d.staffCount > 0) {
+          staffConnected = true;
+          updateVoiceButtonState();
+        }
+      });
+      socket.on('user_joined', d => {
+        showStatus(currentRole, `${d.role} joined`,'info');
+        if (currentRole === 'guest' && d.role === 'receptionist') {
+          staffConnected = true;
+          updateVoiceButtonState();
+        }
+      });
+      socket.on('user_left', d => {
+        if (currentRole === 'guest' && d.role === 'receptionist') {
+          staffConnected = false;
+          updateVoiceButtonState();
+        }
+      });
+      socket.on('processing_status', handleProcessingStatus);
+      socket.on('error', e => showStatus(currentRole, e.message || 'Error','error'));
+      socket.on('analytics_update', () => { if (currentRole === 'analytics') { loadAnalyticsDashboard(); } });
+      
+      socket.on('all_requests', (requests) => {
+          console.log(`📥 Received all_requests:`, requests.length, 'requests');
+          const serverRequestIds = new Set(requests.map(req => req.id));
+          const clientRequestCards = document.querySelectorAll('.request-card');
+          
+          clientRequestCards.forEach(card => {
+              if (!serverRequestIds.has(card.id)) {
+                  card.remove();
+              }
+          });
+          requests.forEach(req => {
+              if (!document.getElementById(req.id)) {
+                  renderRequestCard(req);
+              }
+          });
+      });
+      
+      socket.on('new_request', (request) => {
+        console.log('📥 Received new_request:', request);
+        
+        if (request.isEmergency || request.priority === 'HIGH') {
+          console.log('🚨 EMERGENCY REQUEST RECEIVED:', request);
+          
+          let originalTitle = document.title;
+          let flashCount = 0;
+          const flashInterval = setInterval(() => {
+            document.title = flashCount % 2 === 0 ? '🚨 EMERGENCY!' : originalTitle;
+            flashCount++;
+            if (flashCount > 10) {
+              clearInterval(flashInterval);
+              document.title = originalTitle;
+            }
+          }, 500);
+          
+          playEmergencyAlert();
+          showEmergencyModal(request);
+          
+          if (Notification.permission === 'granted') {
+            new Notification(`🚨 EMERGENCY - ${request.department}`, {
+              body: `Room ${request.roomNumber}: ${request.message}`,
+              icon: '/emergency-icon.png',
+              tag: 'emergency',
+              requireInteraction: true
+            });
+          }
+        }
+        
+        renderRequestCard(request);
+      });
+      
+      socket.on('request_acknowledged', (requestId) => {
+        const card = document.getElementById(requestId);
+        if (card) { card.style.transition = 'opacity 0.3s'; card.style.opacity = '0'; setTimeout(() => card.remove(), 300); }
+      });
+    }
+
+    function selectRole(role, btnEl){
+      if (analyticsInterval) { clearInterval(analyticsInterval); analyticsInterval = null; }
+      currentRole = role;
+      document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+      btnEl?.classList.add('active');
+      document.getElementById('roleSelector').style.display = 'none';
+      document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(role+'Content').classList.add('active');
+      if (!socket) initSocket();
+      if (role === 'analytics') { loadAnalyticsDashboard(); analyticsInterval = setInterval(loadAnalyticsDashboard, 10000); }
+      else if (role === 'staff') { 
+        socket.emit('join_room', { role: 'staff' }); 
+        checkNotificationPermission(); 
+        setTimeout(loadActiveRequests, 500);
+      }
+      else if (pendingRoomFromQR) { joinRoom(pendingRoomFromQR); }
+      else if (role === 'receptionist') { const manual = prompt('Enter Room ID:'); if (manual) joinRoom(manual); }
+    }
+    
+    function goBackToRoleSelector() {
+      if (analyticsInterval) { clearInterval(analyticsInterval); analyticsInterval = null; }
+      document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('roleSelector').style.display = 'block';
+      document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+      if (currentRole === 'staff') { socket.emit('leave_room', { role: 'staff' }); }
+      currentRole = null;
+    }
+
+    // ============ MODERN GUEST INTERFACE FUNCTIONS ============
+    function openTranslationModal() {
+      document.getElementById('translationModal').classList.add('active');
+      // Update voice button state when modal opens
+      setTimeout(updateVoiceButtonState, 100);
+    }
+
+    function closeTranslationModal() {
+      document.getElementById('translationModal').classList.remove('active');
+    }
+
+    function toggleTranscript() {
+      const section = document.getElementById('transcriptSection');
+      transcriptExpanded = !transcriptExpanded;
+      
+      if (transcriptExpanded) {
+        section.classList.add('expanded');
+      } else {
+        section.classList.remove('expanded');
+      }
+    }
+
+    function addTranscriptMessage(text, speaker, isOriginal = true) {
+      const messagesContainer = document.getElementById('transcriptMessages');
+      if (!messagesContainer) return;
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `transcript-message ${speaker}`;
+      
+      let speakerLabel = speaker;
+      if (speaker === 'user' || speaker === 'guest') speakerLabel = 'You';
+      else if (speaker === 'receptionist' || speaker === 'staff') speakerLabel = 'Hotel Staff';
+      else if (speaker === 'assistant') return; // Don't show AI messages in transcript
+      
+      messageDiv.innerHTML = `
+        <div class="transcript-speaker">${speakerLabel}</div>
+        <div class="transcript-text">${text}</div>
+        <div class="transcript-time">${time}</div>
+      `;
+      
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      
+      // Show transcript section if hidden
+      const transcriptSection = document.getElementById('transcriptSection');
+      if (transcriptSection && transcriptSection.style.display === 'none') {
+        transcriptSection.style.display = 'flex';
+      }
+      
+      transcriptMessages.push({ text, speaker, time: new Date(), isOriginal });
+    }
+
+    function sendQuickRequest(type) {
+      const messages = {
+        'reception': 'I need assistance from reception',
+        'housekeeping': 'I need housekeeping service',
+        'room-service': 'I would like to order food'
+      };
+      
+      const message = messages[type] || 'I need assistance';
+      
+      // Add user message to chat
+      addMessageToModernChat(message, 'user');
+      
+      // Send to AI assistant
+      if (currentRoom && socket) {
+        const lang = document.getElementById('modernGuestLanguage')?.value || 'en-US';
+        socket.emit('text_message', { room: currentRoom, role: 'guest', language: lang, text: message, mode: 'ai' });
+        showModernStatus('Request sent!', 'success');
+      }
+    }
+
+    function addMessageToModernChat(text, sender) {
+      const messagesContainer = document.getElementById('modernGuestMessages');
+      if (!messagesContainer) return;
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message-container ${sender}`;
+      
+      if (sender === 'ai') {
+        messageDiv.innerHTML = `
+          <div class="ai-greeting">
+            <div class="ai-avatar">🤖</div>
+            <div class="message-bubble ai-message">
+              <p>${text}</p>
+              <span class="message-time">${time}</span>
+            </div>
+          </div>
+        `;
+      } else {
+        messageDiv.innerHTML = `
+          <div class="message-bubble user-message">
+            <p>${text}</p>
+            <span class="message-time">${time}</span>
+          </div>
+        `;
+      }
+      
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function showModernStatus(message, type) {
+      const statusEl = document.getElementById('modernGuestStatus');
+      if (statusEl) {
+        statusEl.textContent = message;
+        statusEl.className = `status-overlay show ${type}`;
+        
+        setTimeout(() => {
+          statusEl.classList.remove('show');
+        }, 3000);
+      }
+    }
+
+    function toggleModernRecording() {
+      const btn = document.getElementById('modernGuestRecordBtn');
+      if (!btn || btn.disabled) return;
+
+      const icon = btn.querySelector('.voice-icon');
+      const text = btn.querySelector('.voice-text');
+      
+      if (!staffConnected) {
+        showModernStatus('Please wait for hotel staff to connect first', 'error');
+        return;
+      }
+      
+      if (!isRecording) {
+        isRecording = true;
+        btn.classList.add('recording');
+        icon.textContent = '⏹️';
+        text.textContent = 'Stop Recording';
+        
+        // Call the main recording function
+        toggleRecording('guest');
+      } else {
+        isRecording = false;
+        btn.classList.remove('recording');
+        icon.textContent = '🎤';
+        text.textContent = 'Start Voice Translation';
+        
+        // Call the main recording function
+        toggleRecording('guest');
+      }
+    }
+
+    function updateModernRoomDisplay(roomId) {
+      const roomEl = document.getElementById('modernGuestRoomId');
+      if (roomEl && roomId) {
+        const roomNumber = roomId.replace(/^room[-_]?/, '');
+        roomEl.textContent = `Room ${roomNumber}`;
+      }
+    }
+
+    // ============ REST OF ORIGINAL FUNCTIONS (CONTINUING) ============
+    
+    function renderRequestCard(req) {
+      const list = document.querySelector(`#department-${req.department} .request-list`);
+      if (!list) return;
+      
+      const existing = document.getElementById(req.id);
+      if(existing) existing.remove();
+      
+      const isEmergency = req.isEmergency || ['EMERGENCY', 'SECURITY_THREAT', 'MEDICAL_EMERGENCY'].includes(req.intent);
+      const priority = req.priority || (isEmergency ? 'HIGH' : 'NORMAL');
+      const card = document.createElement('div');
+      card.className = `request-card department-${req.department}`;
+      card.id = req.id;
+      if (isEmergency) {
+        card.classList.add('emergency-request');
+      }
+      const time = new Date(req.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const emergencyIcon = isEmergency ? '🚨 ' : '';
+      const priorityBadge = priority === 'HIGH' ? '<span class="priority-high">HIGH PRIORITY</span>' : '';
+      card.innerHTML = `
+          <div class="request-header">
+              <div class="request-info">
+                  <span class="request-room">${emergencyIcon}Room ${req.roomNumber || req.room.replace('room-', '')}</span>
+                  ${priorityBadge}
+              </div>
+              <span class="request-time">${time}</span>
+          </div>
+          <p class="request-message ${isEmergency ? 'emergency-message' : ''}">${req.message}</p>
+          <div class="request-actions">
+              <button class="acknowledge-btn ${isEmergency ? 'emergency-ack' : ''}" data-id="${req.id}" ${isEmergency ? 'data-emergency="true"' : ''}>
+                  ${isEmergency ? '🚨 ACKNOWLEDGE EMERGENCY' : 'Acknowledge'}
+              </button>
+          </div>
+      `;
+      if (isEmergency) {
+        list.insertBefore(card, list.firstChild);
+      } else {
+        list.appendChild(card);
+      }
+    }
+    
+    document.addEventListener('click', (e) => {
+      if (e.target.matches('.acknowledge-btn')) {
+        const requestId = e.target.getAttribute('data-id');
+        socket.emit('acknowledge_request', requestId);
+      }
+    });
+
+    function playEmergencyAlert() {
+      if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
+        const audioContext = new (AudioContext || webkitAudioContext)();
+        
+        for (let i = 0; i < 3; i++) {
+          setTimeout(() => {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+          }, i * 300);
+        }
+      }
+    }
+
+    function showEmergencyModal(request) {
+      const existingModal = document.getElementById('emergencyModal');
+      if (existingModal) existingModal.style.display = 'flex';
+      
+      document.getElementById('emergencyRoom').textContent = `Room ${request.roomNumber}`;
+      document.getElementById('emergencyDepartment').textContent = request.department;
+      document.getElementById('emergencyMessage').textContent = request.message;
+      document.getElementById('emergencyTime').textContent = new Date(request.timestamp).toLocaleString();
+      
+      const ackBtn = document.getElementById('emergencyAcknowledgeBtn');
+      ackBtn.onclick = () => acknowledgeEmergency(request.id);
+      
+      setTimeout(() => {
+        if (document.getElementById('emergencyModal').style.display === 'flex') {
+          closeEmergencyModal();
+        }
+      }, 30000);
+    }
+
+    function acknowledgeEmergency(requestId) {
+      socket.emit('acknowledge_request', requestId);
+      closeEmergencyModal();
+    }
+
+    function closeEmergencyModal() {
+      document.getElementById('emergencyModal').style.display = 'none';
+    }
+
+    async function loadActiveRequests() {
+      try {
+        const response = await fetch('/api/requests/active');
+        const requests = await response.json();
+        
+        document.querySelectorAll('.request-list').forEach(list => list.innerHTML = '');
+        
+        requests.forEach(request => renderRequestCard(request));
+        
+        console.log(`📋 Loaded ${requests.length} active requests from server`);
+      } catch (error) {
+        console.error('Error loading active requests:', error);
+      }
+    }
+
+    async function showDepartmentHistory(department) {
+      currentDepartment = department;
+      document.getElementById('historyModalTitle').textContent = `${department} Request History`;
+      document.getElementById('historyModal').style.display = 'flex';
+      
+      await refreshDepartmentHistory();
+    }
+
+    function closeHistoryModal() {
+      document.getElementById('historyModal').style.display = 'none';
+      currentDepartment = null;
+    }
+
+    async function refreshDepartmentHistory() {
+      if (!currentDepartment) return;
+      
+      const days = document.getElementById('historyDaysFilter').value;
+      const historyContent = document.getElementById('historyContent');
+      const historyStats = document.getElementById('historyStats');
+      
+      historyContent.innerHTML = '<div class="loading">Loading history...</div>';
+      historyStats.innerHTML = '';
+      
+      try {
+        const response = await fetch(`/api/requests/department/${currentDepartment}?days=${days}&limit=100`);
+        const data = await response.json();
+        
+        const acknowledgedCount = data.requests.filter(r => r.status === 'acknowledged').length;
+        const callTriggeredCount = data.requests.filter(r => r.status === 'call_triggered').length;
+        
+        historyStats.innerHTML = `
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-number">${data.requests.length}</div>
+              <div class="stat-label">Total Requests</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">${acknowledgedCount}</div>
+              <div class="stat-label">Acknowledged</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">${callTriggeredCount}</div>
+              <div class="stat-label">Calls Made</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">${acknowledgedCount > 0 ? Math.round((acknowledgedCount / data.requests.length) * 100) : 0}%</div>
+              <div class="stat-label">Response Rate</div>
+            </div>
+          </div>
+        `;
+        
+        if (data.requests.length === 0) {
+          historyContent.innerHTML = '<div class="no-history">No requests found for this period</div>';
+          return;
+        }
+        
+        historyContent.innerHTML = data.requests.map(request => {
+          const timestamp = new Date(request.timestamp).toLocaleString();
+          const acknowledgedTime = request.acknowledgedAt ? 
+            new Date(request.acknowledgedAt).toLocaleString() : null;
+          
+          return `
+            <div class="history-request-card status-${request.status || 'pending'}">
+              <div class="history-request-header">
+                <span class="history-room-number">Room ${request.roomNumber || request.room.replace('room-', '')}</span>
+                <span class="history-timestamp">${timestamp}</span>
+              </div>
+              <div class="history-message">${request.message}</div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="history-status ${request.status || 'pending'}">${request.status || 'pending'}</span>
+                ${acknowledgedTime ? `<span style="font-size: 0.8em; color: #666;">Acknowledged: ${acknowledgedTime}</span>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('Error loading department history:', error);
+        historyContent.innerHTML = '<div class="no-history">Error loading history</div>';
+      }
+    }
+
+    async function exportDepartmentHistory() {
+      if (!currentDepartment) return;
+      
+      const days = document.getElementById('historyDaysFilter').value;
+      
+      try {
+        const response = await fetch(`/api/requests/department/${currentDepartment}?days=${days}&limit=1000`);
+        const data = await response.json();
+        
+        const csvContent = [
+          ['Timestamp', 'Room', 'Message', 'Status', 'Acknowledged At', 'Intent'].join(','),
+          ...data.requests.map(r => [
+            new Date(r.timestamp).toISOString(),
+            r.roomNumber || r.room.replace('room-', ''),
+            `"${r.message.replace(/"/g, '""')}"`,
+            r.status || 'pending',
+            r.acknowledgedAt ? new Date(r.acknowledgedAt).toISOString() : '',
+            r.intent || ''
+          ].join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentDepartment}_requests_${days}days_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+      } catch (error) {
+        console.error('Error exporting history:', error);
+        alert('Error exporting history');
+      }
+    }
+
+    // Complete the generateQR function
+    async function generateQR(){
+      const hotelName = (document.getElementById('hotelName').value || 'My Hotel').trim();
+      const roomNumber = document.getElementById('roomNumber').value.trim();
+      try{
+        const r = await fetch('/api/generate-room',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ hotelName, roomNumber })
+        });
+        const data = await r.json();
+        const guestUrl = `${location.origin}/?room=${data.roomId}`;
+        document.getElementById('qrContainer').classList.add('active');
+        document.getElementById('generatedRoomId').textContent = data.roomId;
+        document.getElementById('guestUrl').textContent = guestUrl;
+        document.getElementById('guestUrlLink').href = guestUrl;
+        const qr = qrcode(0,'M'); 
+        qr.addData(guestUrl); 
+        qr.make();
+        const tag = qr.createImgTag(4,8);
+        const box = document.getElementById('qrCode'); 
+        box.innerHTML = tag;
+        const img = box.querySelector('img');
+        if (img){ 
+          img.style.border='10px solid white'; 
+          img.style.borderRadius='10px'; 
+          img.style.boxShadow='0 4px 8px rgba(0,0,0,.1)'; 
+          img.style.display='block'; 
+          img.style.margin='0 auto'; 
+        }
+        document.getElementById('roomNumber').value='';
+        await reloadRooms();
+      }catch(e){ alert('Failed to generate QR: ' + e.message); }
+    }
+
+    // Continue with remaining functions...
+    async function initializePermanentRooms(){
+      if(!confirm('This will create rooms 301-350 and a Front Desk QR. Continue?')) return;
+      try{
+        const r = await fetch('/api/initialize-rooms', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ startRoom: 301, endRoom: 350 })
+        });
+        const result = await r.json();
+        alert(result.message || 'Rooms initialized');
+        await reloadRooms();
+      }catch(err){ alert('Failed to initialize rooms: ' + err.message); }
+    }
+
+    // UPDATED ANALYTICS FUNCTION WITH NEW STRUCTURE
+    async function loadAnalyticsDashboard() {
+      try {
+        const response = await fetch('/api/analytics/dashboard');
+        const data = await response.json();
+        
+        // Update overview metrics
+        document.getElementById('todayTranslations').textContent = data.overview?.todayTranslations || 0;
+        document.getElementById('activeRooms').textContent = data.overview?.todayRooms || 0;
+        document.getElementById('aiRequests').textContent = data.overview?.todayAIRequests || 0;
+        document.getElementById('callsTriggered').textContent = data.overview?.todayCalls || 0;
+        document.getElementById('totalTranslations').textContent = data.totalTranslations || 0;
+        
+        // Update trends
+        updateTrend('translationTrend', data.overview?.trends?.translations || 0);
+        updateTrend('roomTrend', data.overview?.trends?.rooms || 0);
+        updateTrend('aiTrend', data.overview?.trends?.ai || 0);
+        updateTrend('callTrend', data.overview?.trends?.calls || 0);
+        
+        // Update Service Request Types table
+        updateServiceRequestTypesTable(data.tables?.serviceRequestTypes || []);
+        
+        // Update Calls by Department table
+        updateDepartmentCallsTable(data.tables?.departmentCalls || []);
+        
+        // Update Most Active Rooms
+        updateRoomListAnalytics(data.rooms || []);
+        
+        document.getElementById('lastUpdate').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+      } catch (error) { 
+        console.error('Failed to load analytics:', error); 
+      }
+    }
+
+    function updateTrend(elementId, value) {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+      const numValue = parseFloat(value);
+      element.textContent = (numValue >= 0 ? '+' : '') + value + '%';
+      element.className = 'metric-trend ' + (numValue >= 0 ? 'trend-up' : 'trend-down');
+    }
+
+    // NEW: Service Request Types table update
+    function updateServiceRequestTypesTable(serviceRequestTypes) {
+      const tbody = document.querySelector('#serviceRequestTypesTable tbody');
+      if (!tbody) return;
+      
+      if (!serviceRequestTypes || serviceRequestTypes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; font-style: italic; color: #888;">No data yet</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = serviceRequestTypes.map(request => `
+        <tr>
+          <td>${request.type}</td>
+          <td>${request.count}</td>
+          <td>${request.conversion}</td>
+        </tr>
+      `).join('');
+    }
+
+    function updateRoomListAnalytics(rooms) {
+      const container = document.getElementById('roomListAnalytics');
+      if (!container) return;
+      
+      if (rooms.length === 0) { 
+        container.innerHTML = 'No activity yet'; 
+        return; 
+      }
+      
+      // Create a scrollable list
+      container.innerHTML = `
+        <div class="room-activity-list">
+          ${rooms.slice(0, 10).map(room => `
+            <div class="room-activity-item">
+              <span>Room ${room.roomId?.replace('room-', '') || room.roomId}</span>
+              <span>${room.totalInteractions || 0} interactions</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function updateDepartmentCallsTable(departments) {
+      const tbody = document.querySelector('#departmentCallsTable tbody');
+      if (!tbody) return;
+      if (!departments || departments.length === 0) { 
+        tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; font-style: italic; color: #888;">No call data yet</td></tr>'; 
+        return; 
+      }
+      tbody.innerHTML = departments.map(dept => `
+        <tr>
+          <td>${dept.name}</td>
+          <td>${dept.calls}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function fetchRooms(){ const r = await fetch('/api/rooms'); return r.ok ? r.json() : []; }
+
+    function renderRoomsGrid(rooms){
+      const grid = document.getElementById('roomsGrid'); 
+      if(!grid) return;
+      rooms.sort((a,b)=>{
+        if(String(a.roomId).includes('frontdesk')) return -1;
+        if(String(b.roomId).includes('frontdesk')) return 1;
+        const num = (room)=> {
+          if (room.number && !isNaN(room.number)) return parseInt(room.number);
+          const m = String(room.roomId).match(/room[-_](\d+)/); 
+          return m?parseInt(m[1]):999999;
+        };
+        return num(a)-num(b);
+      });
+      grid.innerHTML='';
+      rooms.forEach(r=>{
+        const isFD = String(r.roomId).includes('frontdesk');
+        let displayName = isFD ? '🏨 Front Desk' : (r.number ? `Room ${r.number}` : `Room ${String(r.roomId).replace('room_','').replace('room-','')}`);
+        const div=document.createElement('div');
+        div.className='room-card'+(r.active?' active':'');
+        div.setAttribute('data-room-number', r.number || '');
+        div.setAttribute('data-room-id', r.roomId);
+        div.innerHTML=`
+          <div class="room-title">${displayName}</div>
+          <div><span class="badge ${r.active?'on':'off'}">${r.active?'ACTIVE':'INACTIVE'}</span></div>
+          ${!isFD?`
+            <button class="rooms-btn ${r.active?'alt':''}" data-act="toggle" data-id="${r.roomId}">${r.active?'Turn OFF':'Turn ON'}</button>
+            <button class="rooms-btn" data-act="rotate" data-id="${r.roomId}">Rotate QR</button>
+          `:''}
+          <button class="rooms-btn" style="background:#2196f3" onclick="viewRoomQR('${r.roomId}', '${r.number || r.roomId}')">View QR</button>
+          <div style="margin-top:8px"><a href="${location.origin}/?room=${encodeURIComponent(r.roomId)}" target="_blank" style="font-size:.85em;color:#1976d2">Open Guest Link</a></div>
+        `;
+        grid.appendChild(div);
+      });
+    }
+    
+    async function reloadRooms(){ renderRoomsGrid(await fetchRooms()); }
+
+    document.addEventListener('click', async (e)=>{
+      const btn=e.target.closest('button[data-act]'); if(!btn) return;
+      const id=btn.getAttribute('data-id'); const act=btn.getAttribute('data-act');
+      if(act==='toggle'){
+        const info = await fetch(`/api/rooms/${encodeURIComponent(id)}`).then(r=>r.json());
+        await fetch(`/api/rooms/${encodeURIComponent(id)}/status`,{ method:'PATCH',headers:{'Content-Type':'application/json'}, body: JSON.stringify({ active: !info.active }) });
+        reloadRooms();
+      }
+      if(act==='rotate'){
+        await fetch(`/api/rooms/${encodeURIComponent(id)}/rotate`,{method:'POST'});
+        reloadRooms();
+      }
+    });
+
+    function filterRooms(){
+      const term=(document.getElementById('roomSearch').value||'').toLowerCase().trim();
+      document.querySelectorAll('#roomsGrid .room-card').forEach(card=>{
+        const title=card.querySelector('.room-title').textContent.toLowerCase();
+        const num=(card.getAttribute('data-room-number')||'').toLowerCase();
+        const id=(card.getAttribute('data-room-id')||'').toLowerCase();
+        const match = title.includes(term) || num.includes(term) || id.includes(term) || (term && title.includes(`room ${term}`)) || (term && num.startsWith(term));
+        card.style.display = match ? '' : 'none';
+      });
+    }
+
+    async function activateAllRooms(){
+      if(!confirm('Activate all rooms?')) return;
+      const rooms=await fetchRooms();
+      for(const r of rooms){ if(!String(r.roomId).includes('frontdesk') && !r.active){
+        await fetch(`/api/rooms/${encodeURIComponent(r.roomId)}/status`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({active:true})});
+      }}
+      reloadRooms();
+    }
+
+    async function deactivateAllRooms(){
+      if(!confirm('Deactivate all rooms?')) return;
+      const rooms=await fetchRooms();
+      for(const r of rooms){ if(!String(r.roomId).includes('frontdesk') && r.active){
+        await fetch(`/api/rooms/${encodeURIComponent(r.roomId)}/status`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({active:false})});
+      }}
+      reloadRooms();
+    }
+
+    async function joinRoom(roomId){
+      try{
+        const res = await fetch(`/api/rooms/${encodeURIComponent(roomId)}`);
+        if(res.ok){ const info=await res.json(); if(!info.active){ showStatus(currentRole,'This room is currently disabled.','error'); return; } }
+      }catch{}
+      currentRoom=roomId;
+      if(currentRole==='guest') {
+        document.getElementById('guestRoomId').textContent=roomId;
+        updateModernRoomDisplay(roomId);
+      }
+      if(currentRole==='receptionist') document.getElementById('receptionistRoomId').textContent=roomId;
+      const lang = document.getElementById('modernGuestLanguage')?.value || document.getElementById('guestLanguage')?.value || 'en-US';
+      socket.emit('join_room',{ room: roomId, role: currentRole, language: lang });
+      showStatus(currentRole,'Connecting...','info');
+    }
+
+    function handleProcessingStatus(d){
+      const map={transcribing:'Converting speech to text...',translating:'Translating...',complete:'Translation complete!',error:d.message||'Processing failed'};
+      const type=d.status==='error'?'error':(d.status==='complete'?'success':'info');
+      showStatus(currentRole,map[d.status]||'Processing...',type);
+    }
+    
+    function handleTranslation(msg){ 
+      renderMessage('guest',msg); 
+      renderMessage('receptionist',msg);
+      
+      // Handle modern guest interface
+      if (currentRole === 'guest') {
+        if (msg.speaker === 'assistant') {
+          // AI responses go to main chat but NOT transcript
+          addMessageToModernChat(msg.original.text, 'ai');
+        } else {
+          // Guest/staff messages go to both main chat and transcript
+          if (msg.speaker === 'guest') {
+            addTranscriptMessage(msg.original.text, 'guest');
+          } else if (msg.speaker === 'receptionist') {
+            addTranscriptMessage(msg.translated.text, 'receptionist'); // Show translated version for guest
+          }
+        }
+      }
+    }
+    
+    function renderMessage(role,data){
+      const box=document.getElementById(role+'Messages'); if(!box) return;
+      const el=document.createElement('div'); 
+      el.className=`message ${data.speaker}`;
+      let primary,secondary,header;
+      if(data.speaker === 'assistant'){
+        header = '🤖 AI Assistant';
+        primary = data.original.text; secondary = null; 
+      } else {
+        if(role==='guest'){ 
+          if(data.speaker==='guest'){ primary=data.original.text; secondary=data.translated.text; } 
+          else { primary=data.translated.text; secondary=data.original.text; } 
+        } else { 
+          if(data.speaker==='receptionist'){ primary=data.original.text; secondary=data.translated.text; } 
+          else { primary=data.translated.text; secondary=data.original.text; } 
+        }
+        header = data.speaker==='guest'?'👤 Guest':'🏨 Receptionist';
+      }
+      const esc=t=>(t||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+      el.innerHTML=`
+        <div class="message-header">${header} ${data.speaker!=='assistant' ? `<span style="font-size:.8em;color:#666;">(${data.speaker===role?'You':'Them'})</span>` : ''}</div>
+        <div class="original-text">${esc(primary)}</div>
+        ${secondary&&secondary!==primary?`<div class="translated-text">Translation: ${esc(secondary)}</div>`:''}
+        ${data.speaker!=='assistant' ? '<div class="audio-controls"><button class="play-btn" disabled>🔊 Play</button><button class="play-btn" disabled>🔇 Stop</button></div>' : ''}
+      `;
+      box.appendChild(el); box.scrollTop=box.scrollHeight;
+    }
+    
+    function showStatus(role,msg,kind){
+      const id = role==='guest' ? 'guestStatus' : (role==='receptionist' ? 'receptionistStatus' : null);
+      if(!id) return; 
+      const el=document.getElementById(id);
+      el.innerHTML = msg ? `<div class="status ${kind}">${msg}</div>` : '';
+      if(msg) setTimeout(()=>{ el.innerHTML=''; }, 4000);
+      
+      // Also show in modern interface if guest
+      if (role === 'guest') {
+        showModernStatus(msg, kind);
+      }
+    }
+
+    // Audio recording functions
+    let audioCtx, mediaStream, sourceNode, processorNode, chunks=[], recording=false;
+    
+    async function ensureAudio(){
+      if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+      if(audioCtx.state==='suspended'){ try{ await audioCtx.resume(); }catch{} }
+      if(!mediaStream){
+        mediaStream=await navigator.mediaDevices.getUserMedia({audio:true});
+        sourceNode=audioCtx.createMediaStreamSource(mediaStream);
+        processorNode=audioCtx.createScriptProcessor(4096,1,1);
+        processorNode.onaudioprocess=e=>{ if(recording) chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+        sourceNode.connect(processorNode); processorNode.connect(audioCtx.destination);
+      }
+    }
+
+    function mergeFloat32(arrs){ const len=arrs.reduce((n,a)=>n+a.length,0); const out=new Float32Array(len); let o=0; for(const a of arrs){ out.set(a,o); o+=a.length; } return out; }
+    function resampleTo16k(float32,inRate){ const outRate=16000,ratio=inRate/outRate,n=Math.round(float32.length/ratio),out=new Float32Array(n); for(let i=0;i<n;i++){ const idx=i*ratio,i0=Math.floor(idx),i1=Math.min(i0+1,float32.length-1),frac=idx-i0; out[i]=float32[i0]*(1-frac)+float32[i1]*frac; } return out; }
+    function floatTo16lePCM(float32){ const buf=new ArrayBuffer(float32.length*2),view=new DataView(buf); for(let i=0,o=0;i<float32.length;i++,o+=2){ let s=Math.max(-1,Math.min(1,float32[i])); s=s<0?s*0x8000:s*0x7FFF; view.setInt16(o,s,true);} return buf; }
+    function bufToB64(buf){ let bin=''; const bytes=new Uint8Array(buf),chunk=0x8000; for(let i=0;i<bytes.length;i+=chunk){ bin+=String.fromCharCode.apply(null, bytes.subarray(i,i+chunk)); } return btoa(bin); }
+
+    async function toggleRecording(role){
+      if(!currentRoom) return showStatus(role,'Join a room first (scan QR or enter Room ID)','error');
+      const btn=document.getElementById(role+'RecordBtn');
+      
+      if(!recording){
+        try{ await ensureAudio(); }catch{ return showStatus(role,'Microphone permission required','error'); }
+        chunks=[]; recording=true; btn.classList.add('recording'); 
+        btn.textContent = role==='guest' ? 'Recording...' : 'Recording...'; 
+        btn.dataset.ts=Date.now();
+        showStatus(role,'Recording... click again to stop','info');
+      }else{
+        recording=false;
+        btn.classList.remove('recording');
+        btn.textContent = role==='guest' ? 'Speak for Translation' : 'Speak (English)';
+        const dur=Date.now()-(parseInt(btn.dataset.ts||'0',10));
+        if(dur<MIN_MS){ chunks=[]; return showStatus(role,'Recording too short. Please speak at least 1s.','error'); }
+        if(dur>MAX_MS){ showStatus(role,'Long message — consider shorter sentences for best accuracy.','info'); }
+        const merged=mergeFloat32(chunks); chunks=[];
+        const resampled=resampleTo16k(merged,audioCtx.sampleRate);
+        const pcm=floatTo16lePCM(resampled);
+        const b64=bufToB64(pcm);
+        const language = document.getElementById('modernGuestLanguage')?.value || document.getElementById('guestLanguage')?.value || 'en-US';
+        socket.emit('audio_message',{ room: currentRoom, role, language, audioData: b64 });
+        showStatus(role,'Processing...','info');
+      }
+    }
+
+    // Notification functions
+    const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
+
+    function checkNotificationPermission() {
+      if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        enableNotificationsBtn.textContent = 'Notifications Not Supported';
+        enableNotificationsBtn.disabled = true;
+        return;
+      }
+      if (Notification.permission === 'granted') {
+        enableNotificationsBtn.textContent = 'Notifications Enabled';
+        enableNotificationsBtn.disabled = true;
+      } else {
+        enableNotificationsBtn.textContent = 'Enable Notifications';
+        enableNotificationsBtn.disabled = false;
+      }
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+      return outputArray;
+    }
+
+    async function subscribeUserToPush() {
+      try {
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+          alert('Notifications permission was not granted.');
+          return;
+        }
+        const { publicKey } = await fetch('/api/push/vapidPublicKey').then(r => r.json());
+        if (!publicKey) throw new Error('Missing VAPID public key from server');
+        const appServerKey = urlBase64ToUint8Array(publicKey);
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: appServerKey
+          });
+        }
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subscription: sub,
+            role: currentRole || 'staff',
+            department: null
+          })
+        });
+        console.log('Push subscription registered.');
+        checkNotificationPermission();
+      } catch (err) {
+        console.error('Push subscribe failed:', err);
+        alert('Push subscribe failed. Check console for details.');
+      }
+    }
+
+    enableNotificationsBtn.addEventListener('click', () => {
+      if (Notification.permission === 'denied') {
+        alert('You blocked notifications. Re-enable in browser site settings.');
+        return;
+      }
+      subscribeUserToPush();
+    });
+
+    function viewRoomQR(roomId, roomNumber) {
+      const baseUrl = window.location.origin;
+      const guestUrl = `${baseUrl}/?room=${encodeURIComponent(roomId)}`;
+      
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      `;
+      
+      const content = document.createElement('div');
+      content.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        text-align: center;
+        max-width: 400px;
+      `;
+      
+      content.innerHTML = `
+        <h3>Room ${roomNumber} QR Code</h3>
+        <div id="qrCodeModal"></div>
+        <p style="margin: 15px 0;"><strong>Guest URL:</strong></p>
+        <p style="font-size: 0.9em; word-break: break-all; color: #666;">${guestUrl}</p>
+        <button onclick="this.closest('[style*=fixed]').remove()" style="margin-top: 20px; padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">Close</button>
+      `;
+      
+      modal.appendChild(content);
+      document.body.appendChild(modal);
+      
+      try {
+        const qr = qrcode(0, 'M');
+        qr.addData(guestUrl);
+        qr.make();
+        const qrElement = document.getElementById('qrCodeModal');
+        qrElement.innerHTML = qr.createImgTag(4, 8);
+        const img = qrElement.querySelector('img');
+        if (img) {
+          img.style.cssText = 'border: 10px solid white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);';
+        }
+      } catch (e) {
+        console.error('QR generation failed:', e);
+        document.getElementById('qrCodeModal').innerHTML = '<p>QR code generation failed</p>';
+      }
+      
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.remove();
+        }
+      });
+    }
+
+    async function exportAnalytics() {
+      try {
+        const response = await fetch('/api/analytics/export');
+        const data = await response.json();
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `hotel_analytics_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        console.log('Analytics exported successfully');
+      } catch (error) {
+        console.error('Export failed:', error);
+        alert('Failed to export analytics');
+      }
+    }
+
+    // DOM Content Loaded Event Handler
+    document.addEventListener('DOMContentLoaded', () => {
+      updateConnectionStatus(false);
+      
+      // Set initial greeting time
+      const greetingTimeEl = document.getElementById('greetingTime');
+      if (greetingTimeEl) {
+        greetingTimeEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      
+      if (!socket) initSocket();
+      const params = new URLSearchParams(location.search);
+      const roomParam = params.get('room');
+      const roleParam = (params.get('role')||'').toLowerCase();
+      const isRoomLink = !!roomParam;
+      
+      if (isRoomLink) {
+        pendingRoomFromQR = roomParam;
+        document.getElementById('adminBtn')?.remove();
+        document.getElementById('adminContent')?.remove();
+        document.getElementById('analyticsBtn')?.remove();
+        document.getElementById('analyticsContent')?.remove();
+        document.getElementById('staffBtn')?.remove();
+        document.getElementById('staffContent')?.remove();
+        
+        const roleSelector = document.getElementById('roleSelector');
+        roleSelector.style.display='block';
+        document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
+        const isFrontDesk = roomParam.toLowerCase().includes('frontdesk');
+        
+        if (isFrontDesk) {
+          roleSelector.innerHTML = `<h3>🏨 Front Desk Translation</h3><p>Select your role for translation assistance</p><div class="role-buttons"><button class="role-btn" onclick="selectRole('guest', this)" style="padding:25px 40px;"><div class="role-icon">👤</div><div class="role-title">I'm a Guest</div><div class="role-description">Need translation help</div><div class="role-badge">Guest Access</div></button><button class="role-btn" onclick="selectRole('receptionist', this)" style="padding:25px 40px;"><div class="role-icon">👨‍💼</div><div class="role-title">I'm Hotel Staff</div><div class="role-description">Assist guest with translation</div><div class="role-badge">Staff Access</div></button></div>`;
+        } else {
+          const roomNumber = roomParam.replace(/^room[-_]?/, '');
+          roleSelector.innerHTML = `<h3>Room ${roomNumber}</h3><p>How would you like to use this service?</p><div class="role-buttons"><button class="role-btn" onclick="selectRole('guest', this)" style="padding:25px 40px;"><div class="role-icon">👤</div><div class="role-title">I'm a Guest</div><div class="role-description">Get help & translate</div><div class="role-badge">Guest Access</div></button><button class="role-btn" onclick="selectRole('receptionist', this)" style="padding:25px 40px;"><div class="role-icon">👨‍💼</div><div class="role-title">I'm Hotel Staff</div><div class="role-description">Assist guest in this room</div><div class="role-badge">Staff Access</div></button></div>`;
+        }
+        
+        if (roleParam === 'guest' || roleParam === 'receptionist') {
+          selectRole(roleParam);
+          joinRoom(roomParam);
+        }
+      } else {
+        document.getElementById('roleSelector').style.display='block';
+        reloadRooms();
+      }
+
+      // Event listeners for modern guest interface
+      const modernGuestSendBtn = document.getElementById('modernGuestSendBtn');
+      if (modernGuestSendBtn) {
+        modernGuestSendBtn.addEventListener('click', () => {
+          const el = document.getElementById('modernGuestTextInput');
+          const text = (el.value || '').trim();
+          if (!text) return;
+          if (!currentRoom) { showStatus('guest', 'Join a room first (scan QR or enter Room ID)', 'error'); return; }
+          
+          // Add user message to modern chat
+          addMessageToModernChat(text, 'user');
+          addTranscriptMessage(text, 'user');
+          
+          const lang = document.getElementById('modernGuestLanguage')?.value || 'en-US';
+          socket.emit('text_message', { room: currentRoom, role: 'guest', language: lang, text, mode: 'ai' });
+          el.value = '';
+          showModernStatus('Message sent!', 'success');
+        });
+      }
+
+      // Event listeners for original interface
+      const guestSendBtn = document.getElementById('guestSendBtn');
+      if (guestSendBtn) {
+        guestSendBtn.addEventListener('click', () => {
+          const el = document.getElementById('guestTextInput');
+          const text = (el.value || '').trim();
+          if (!text) return;
+          if (!currentRoom) { showStatus('guest', 'Join a room first (scan QR or enter Room ID)', 'error'); return; }
+          const lang = document.getElementById('guestLanguage')?.value || 'en-US';
+          socket.emit('text_message', { room: currentRoom, role: 'guest', language: lang, text, mode: 'ai' });
+          el.value = '';
+          showStatus('guest', 'Message sent!', 'success');
+        });
+      }
+      
+      const receptionistSendBtn = document.getElementById('receptionistSendBtn');
+      if (receptionistSendBtn) {
+        receptionistSendBtn.addEventListener('click', () => {
+          const el = document.getElementById('receptionistTextInput');
+          const text = (el.value || '').trim();
+          if (!text) return;
+           if (!currentRoom) { showStatus('receptionist', 'Join a room first', 'error'); return; }
+          socket.emit('text_message', { room: currentRoom, role: 'receptionist', language: 'en-US', text });
+          el.value = '';
+          showStatus('receptionist', 'Message sent!', 'success');
+        });
+      }
+
+      // Language change handlers
+      const sel = document.getElementById('guestLanguage');
+      sel?.addEventListener('change', () => {
+        if (socket && currentRoom && currentRole==='guest') {
+          socket.emit('join_room', { room: currentRoom, role:'guest', language: sel.value });
+          showStatus('guest', `Language changed to ${sel.options[sel.selectedIndex].text}`, 'success');
+        }
+      });
+
+      const modernSel = document.getElementById('modernGuestLanguage');
+      modernSel?.addEventListener('change', () => {
+        if (socket && currentRoom && currentRole==='guest') {
+          socket.emit('join_room', { room: currentRoom, role:'guest', language: modernSel.value });
+          showModernStatus(`Language changed to ${modernSel.options[modernSel.selectedIndex].text}`, 'success');
+        }
+        // Update voice button state when language changes
+        updateVoiceButtonState();
+      });
+
+      // Audio context unlock
+      const unlock=()=>{ try{ audioCtx?.resume?.(); }catch{} };
+      window.addEventListener('click', unlock, { once:true, passive:true });
+      window.addEventListener('touchstart', unlock, { once:true, passive:true });
+      document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible'){ try{ audioCtx?.resume?.(); }catch{} } });
+    });
+
+    // Close modals when clicking outside
+    document.addEventListener('click', (e) => {
+      const historyModal = document.getElementById('historyModal');
+      const emergencyModal = document.getElementById('emergencyModal');
+      const translationModal = document.getElementById('translationModal');
+      
+      if (e.target === historyModal) {
+        closeHistoryModal();
+      }
+      
+      if (e.target === emergencyModal) {
+        closeEmergencyModal();
+      }
+
+      if (e.target === translationModal) {
+        closeTranslationModal();
+      }
+    });
+
+    // Expose globals for onclick attributes
+    window.selectRole = selectRole;
+    window.generateQR = generateQR;
+    window.initializePermanentRooms = initializePermanentRooms;
+    window.toggleRecording = toggleRecording;
+    window.toggleModernRecording = toggleModernRecording;
+    window.filterRooms = filterRooms;
+    window.activateAllRooms = activateAllRooms;
+    window.deactivateAllRooms = deactivateAllRooms;
+    window.viewRoomQR = viewRoomQR;
+    window.exportAnalytics = exportAnalytics;
+    window.goBackToRoleSelector = goBackToRoleSelector;
+    window.showDepartmentHistory = showDepartmentHistory;
+    window.closeHistoryModal = closeHistoryModal;
+    window.refreshDepartmentHistory = refreshDepartmentHistory;
+    window.exportDepartmentHistory = exportDepartmentHistory;
+    window.closeEmergencyModal = closeEmergencyModal;
+    window.openTranslationModal = openTranslationModal;
+    window.closeTranslationModal = closeTranslationModal;
+    window.toggleTranscript = toggleTranscript;
+    window.sendQuickRequest = sendQuickRequest;
+  </script>
+</body>
+</html>
