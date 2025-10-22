@@ -2005,7 +2005,7 @@
     </div>
   </div>
   
-  <!-- UPDATED JAVASCRIPT -->
+  <!-- UPDATED JAVASCRIPT WITH FIX FOR EVENT LISTENER NULL CHECK -->
   <script>
     const MIN_MS = 1000, MAX_MS = 15000;
     let socket = null, currentRole = null, currentRoom = null, pendingRoomFromQR = null;
@@ -3064,21 +3064,40 @@
       }
     }
 
-    // Notification functions
-    const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
-
+    // Notification functions - FIXED WITH NULL CHECK
     function checkNotificationPermission() {
+      // Find any notification button that exists
+      const possibleButtons = [
+        'enableNotificationsBtnReceptionist',
+        'enableNotificationsBtnHousekeeping',
+        'enableNotificationsBtnRestaurant',
+        'enableNotificationsBtnSecurity'
+      ];
+      
+      let enableNotificationsBtn = null;
+      for (const btnId of possibleButtons) {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          enableNotificationsBtn = btn;
+          break;
+        }
+      }
+      
+      if (!enableNotificationsBtn) return; // Element doesn't exist on this page
+      
       if (!('Notification' in window) || !('serviceWorker' in navigator)) {
         enableNotificationsBtn.textContent = 'Notifications Not Supported';
         enableNotificationsBtn.disabled = true;
         return;
       }
       if (Notification.permission === 'granted') {
-        enableNotificationsBtn.textContent = 'Notifications Enabled';
+        enableNotificationsBtn.textContent = '✓ Notifications Enabled';
         enableNotificationsBtn.disabled = true;
       } else {
         enableNotificationsBtn.textContent = 'Enable Notifications';
         enableNotificationsBtn.disabled = false;
+        // Add click handler
+        enableNotificationsBtn.onclick = subscribeUserToPush;
       }
     }
 
@@ -3116,7 +3135,7 @@
           body: JSON.stringify({
             subscription: sub,
             role: currentRole || 'staff',
-            department: null
+            department: currentDepartment || null
           })
         });
         console.log('Push subscription registered.');
@@ -3126,14 +3145,6 @@
         alert('Push subscribe failed. Check console for details.');
       }
     }
-
-    enableNotificationsBtn.addEventListener('click', () => {
-      if (Notification.permission === 'denied') {
-        alert('You blocked notifications. Re-enable in browser site settings.');
-        return;
-      }
-      subscribeUserToPush();
-    });
 
     function viewRoomQR(roomId, roomNumber) {
       const baseUrl = window.location.origin;
@@ -3377,6 +3388,8 @@
     window.closeTranslationModal = closeTranslationModal;
     window.toggleTranscript = toggleTranscript;
     window.sendQuickRequest = sendQuickRequest;
+    window.selectDepartment = selectDepartment;
+    window.goBackToDepartmentSelector = goBackToDepartmentSelector;
   </script>
 </body>
 </html>
