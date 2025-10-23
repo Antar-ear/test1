@@ -752,6 +752,9 @@ function getGuestLanguageInRoom(room) {
 // ----------------------------------------------------
 // BULLETPROOF AI Assistant Logic with Emergency Routing
 // ----------------------------------------------------
+// FIXED AI Assistant Logic - No defaults, proper intent detection, concise staff messages
+// ----------------------------------------------------
+
 async function getAIAssistantResponse(text, room, language, history = []) {
   try {
     if (!process.env.GROQ_API_KEY) {
@@ -773,102 +776,143 @@ async function getAIAssistantResponse(text, room, language, history = []) {
         console.log(`🤖 Processing follow-up for room ${room}:`, pendingAction);
         
         if (pendingAction.type === 'collect_details') {
-            systemPrompt = `The user asked for ${pendingAction.service_type}. You asked for more details. They provided: "${userText}"
+            // Use the inferred intent from when we asked for details
+            systemPrompt = `The user asked for ${pendingAction.service_type}. You asked for details. They replied: "${userText}"
+
+**CRITICAL RULES:**
+1. Respond in THE SAME LANGUAGE the user is speaking
+2. Staff message must be SHORT and ACTION-ORIENTED
+3. Use the intent: ${pendingAction.intent}
+
+**STAFF MESSAGE FORMAT:**
+- NOT: "Room ${roomNumber}: Guest requests ${pendingAction.service_type} - ${userText}"
+- YES: "Room ${roomNumber}: ${pendingAction.service_type} - ${userText}"
+- OR BETTER: "Rm ${roomNumber}: clean room", "Rm ${roomNumber}: veg burger", "Rm ${roomNumber}: taxi to airport"
 
 You must respond EXACTLY like this:
 
-RESPONSE: Perfect! I'll arrange that for you right away.
-JSON: {"action":"make_call","intent":"${pendingAction.intent || 'RECEPTIONIST_REQUEST'}","message":"Room ${roomNumber}: Guest requests ${pendingAction.service_type} - ${userText}"}
+RESPONSE: [Warm confirmation in user's language]
+JSON: {"action":"make_call","intent":"${pendingAction.intent}","message":"Rm ${roomNumber}: [brief action] - [key details]"}
 
 NEVER add anything else. NEVER ask more questions.`;
             
-            userPrompt = `User's details: "${userText}"`;
+            userPrompt = `User provided details: "${userText}"`;
             
         } else if (pendingAction.confirmation_question) {
             systemPrompt = `You asked: "${pendingAction.confirmation_question}". User replied: "${userText}"
 
-If they confirmed (yes/ok/sure/proceed):
-RESPONSE: Perfect! I'm arranging that now.
+If confirmed (yes/ok/sure):
+RESPONSE: [Confirmation in user's language]
 JSON: {"action":"make_call","message":"${pendingAction.message}","intent":"${pendingAction.intent}"}
 
-If they declined (no/cancel/nevermind):
-RESPONSE: No problem, I've cancelled that request.
+If declined (no/cancel):
+RESPONSE: [Cancellation in user's language]
 JSON: {"action":"cancel"}`;
             
             userPrompt = `User reply: "${userText}"`;
         }
         
     } else {
-        // Main conversation - BULLETPROOF logic with explicit classification
-        // Main conversation - BULLETPROOF logic with direct information handling
-        systemPrompt = systemPrompt = `You are a warm, friendly AI assistant at ${hotelData.info.hotel_name}. Speak naturally like a helpful hotel concierge.
+        // Main conversation - EXPLICIT intent detection with NO defaults
+        systemPrompt = `You are a friendly AI concierge at ${hotelData.info.hotel_name}.
 
-**YOUR PERSONALITY:**
-Be conversational, helpful, and genuine. Keep responses brief (2-3 sentences usually) but warm. Vary your language - don't sound repetitive.
-**CRITICAL LANGUAGE RULE:**
-The guest is speaking to you in their native language. You MUST respond in THE SAME LANGUAGE they are using.
-- If guest speaks Spanish → respond in Spanish
-- If guest speaks German → respond in German
-- If guest speaks Hindi → respond in Hindi
-- If guest speaks English → respond in English
-Match their language exactly. This is very important for guest comfort.
+**LANGUAGE RULE (CRITICAL):**
+STEP 1: Detect what language the user is speaking
+STEP 2: Respond in THAT EXACT LANGUAGE
+STEP 3: Staff message stays in English (short/concise)
 
-The message field in JSON should always be in English for staff, but your RESPONSE to the guest must be in their language.
-**HOW TO RESPOND:**
+Languages you support: English, Spanish, German, French, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia
 
-When you can answer directly (wifi, check-in times, facilities):
-→ Just answer naturally from hotel info below
-→ End with: JSON: {"action":"provide_info","info_type":"wifi"}
+**INTENT DETECTION (NO DEFAULTS ALLOWED):**
 
-When guest requests a service with details (specific food, destination, item):
-→ Acknowledge warmly and naturally
-→ Tell them you're notifying the right department
-→ End with: JSON: {"action":"make_call","intent":"FOOD_ORDER","message":"Room ${roomNumber}: [what they want]"}
+Analyze the request and classify as ONE of these:
+- FOOD_ORDER: food, meal, burger, pizza, breakfast, lunch, dinner, snack, drink, restaurant service
+- HOUSEKEEPING: cleaning, towels, pillows, sheets, room clean, housekeeping, tidy up, make bed
+- MAINTENANCE: repair, broken, not working, fix, AC, TV, lights, plumbing, electrical
+- RECEPTIONIST_REQUEST: cab, taxi, transport, checkout, information, general help, booking, concierge
+- EMERGENCY: emergency, urgent help, intruder, theft, serious medical
+- SECURITY_THREAT: suspicious person, threat, danger, harassment
+- MEDICAL_ASSISTANCE: doctor, hurt, pain, medical help, injury
 
-When request is vague (just "food", just "cab"):
-→ Show enthusiasm
-→ Ask what specifically they need
-→ End with: JSON: {"collect_details":true,"service_type":"[service]","intent":"[intent]"}
+**IF YOU CANNOT CONFIDENTLY DETECT INTENT:** Ask clarifying questions, don't guess!
 
-When they give info after you already processed:
-→ Thank them naturally
-→ End with: JSON: {"action":"acknowledge"}
+**RESPONSE TYPES:**
 
-**RULES:**
-1. Be natural and conversational - generate your own sentences
-2. NEVER say "I'll arrange that" AND ask a question
-3. Keep JSON on separate line starting with JSON:
-4. Don't show technical details to guest
+TYPE 1: Direct Information (wifi, check-in times, facilities)
+→ Answer naturally in user's language
+→ JSON: {"action":"provide_info","info_type":"[wifi/checkin/facility]"}
+
+TYPE 2: Service with Specific Details
+→ Acknowledge warmly
+→ JSON: {"action":"make_call","intent":"[DETECTED_INTENT]","message":"Rm ${roomNumber}: [concise action]"}
+   Examples:
+   - "Rm ${roomNumber}: veg burger order"
+   - "Rm ${roomNumber}: extra towels needed"
+   - "Rm ${roomNumber}: AC not working"
+   - "Rm ${roomNumber}: taxi to airport 3pm"
+
+TYPE 3: Vague Request (needs details)
+→ Ask what they need specifically
+→ JSON: {"collect_details":true,"service_type":"[what they asked for]","intent":"[MUST SPECIFY BASED ON SERVICE TYPE]"}
+   Examples:
+   - "I need food" → {"collect_details":true,"service_type":"food","intent":"FOOD_ORDER"}
+   - "housekeeping please" → {"collect_details":true,"service_type":"housekeeping","intent":"HOUSEKEEPING"}
+   - "can you arrange transport" → {"collect_details":true,"service_type":"transport","intent":"RECEPTIONIST_REQUEST"}
+
+TYPE 4: Follow-up Info (after request processed)
+→ Thank naturally
+→ JSON: {"action":"acknowledge"}
+
+**STAFF MESSAGE RULES:**
+✅ SHORT: "Rm ${roomNumber}: [action]"
+✅ ACTION-ORIENTED: What needs to be done
+✅ KEY DETAILS ONLY: Essential info
+❌ NO full sentences to staff
+❌ NO "Guest requests..."
+❌ NO unnecessary words
+
+Examples of GOOD staff messages:
+- "Rm 101: veg burger + fries"
+- "Rm 205: 3 towels needed"
+- "Rm 310: taxi to JFK 2pm"
+- "Rm 142: room cleaning now"
+- "Rm 508: AC broken - urgent"
 
 **HOTEL INFO:**
-- ${hotelData.info.hotel_name}
-- Check-in/out: ${hotelData.info.check_in_time} / ${hotelData.info.check_out_time}
+- Name: ${hotelData.info.hotel_name}
+- Check-in: ${hotelData.info.check_in_time} / Check-out: ${hotelData.info.check_out_time}
 - WiFi: ${hotelData.info.wifi_password || 'Ask reception'}
 - Phone: ${hotelData.info.front_desk_number}
-- Facilities: ${hotelData.facilities.map(f => f.name).join(', ') || 'Various'}
+- Facilities: ${hotelData.facilities.map(f => f.name).join(', ') || 'Pool, Gym, Restaurant'}
 
-**ROUTING:**
-- Food → FOOD_ORDER → Restaurant
-- Towels/cleaning → HOUSEKEEPING → Housekeeping
-- Transport/general → RECEPTIONIST_REQUEST → Reception
-- Emergency → EMERGENCY → Reception + Security
+**ROUTING RULES:**
+- Food/Restaurant → FOOD_ORDER → Restaurant
+- Cleaning/Towels/Housekeeping → HOUSEKEEPING → Housekeeping
+- Repairs/Broken items → MAINTENANCE → Housekeeping
+- Transport/Info/General → RECEPTIONIST_REQUEST → Reception
+- Emergencies → EMERGENCY → Reception + Security
+- Security Issues → SECURITY_THREAT → Security
+- Medical → MEDICAL_ASSISTANCE → Reception
 
-Chat history: ${formattedHistory || 'New chat'}`;
+Chat history: ${formattedHistory || 'New conversation'}`;
         
         userPrompt = `Guest in Room ${roomNumber} says: "${userText}"
-        
-IMPORTANT: Detect what language the guest is speaking and respond in THAT SAME LANGUAGE. 
-Your RESPONSE must match their language.
-The JSON message field should be in English for staff.
 
-Respond naturally and conversationally as the hotel assistant.`;
+CRITICAL STEPS:
+1. Detect the language they're speaking
+2. Classify the intent based on keywords/context
+3. If specific details provided → create service call with concise message
+4. If vague → ask for details WITH proper intent
+5. Respond to guest in THEIR language
+
+Now process this request:`;
     }
 
     const completion = await groq.chat.completions.create({
       model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-      temperature: 0.03, // Lower temperature for more consistent responses
-      top_p: 0.8,
-      max_tokens: 500, // Shorter to prevent rambling
+      temperature: 0.05, // Very low for consistency
+      top_p: 0.9,
+      max_tokens: 400,
       stream: false,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -891,26 +935,26 @@ Respond naturally and conversationally as the hotel assistant.`;
     for (const line of lines) {
       if (line.startsWith('RESPONSE:')) {
         responseLine = line.substring(9).trim();
-        break; // Take first RESPONSE line only
+        break;
       }
     }
     
     for (const line of lines) {
       if (line.startsWith('JSON:')) {
         jsonLine = line.substring(5).trim();
-        break; // Take first JSON line only
+        break;
       }
     }
 
-    // Use the parsed response if found
+    // Use the parsed response
     if (responseLine) {
       assistantResponse = responseLine;
     } else {
       // Aggressive fallback parsing
       const cleanResponse = fullResponse
-        .replace(/JSON\s*:.*$/gim, '') // Remove JSON lines
-        .replace(/\{[\s\S]*?\}/g, '') // Remove JSON objects
-        .replace(/RESPONSE\s*:/gi, '') // Remove RESPONSE: prefix
+        .replace(/JSON\s*:.*$/gim, '')
+        .replace(/\{[\s\S]*?\}/g, '')
+        .replace(/RESPONSE\s*:/gi, '')
         .trim();
       
       if (cleanResponse && cleanResponse.length > 5) {
@@ -925,7 +969,6 @@ Respond naturally and conversationally as the hotel assistant.`;
         console.log(`🤖 AI control action for room ${room}:`, controlJson);
       } catch (e) {
         console.error('❌ Failed to parse AI JSON:', e.message);
-        // Fallback: try to extract JSON from full response
         const jsonMatch = fullResponse.match(/\{[^}]*"action"[^}]*\}/);
         if (jsonMatch) {
           try {
@@ -937,30 +980,30 @@ Respond naturally and conversationally as the hotel assistant.`;
       }
     }
 
-    // SAFETY: Remove any remaining JSON artifacts
+    // SAFETY: Remove any remaining JSON artifacts from user-facing response
     assistantResponse = assistantResponse
-      .replace(/\{[\s\S]*?\}/g, '') // Remove any JSON objects
-      .replace(/JSON\s*:.*$/gim, '') // Remove JSON mentions
-      .replace(/RESPONSE\s*:/gi, '') // Remove RESPONSE prefix
+      .replace(/\{[\s\S]*?\}/g, '')
+      .replace(/JSON\s*:.*$/gim, '')
+      .replace(/RESPONSE\s*:/gi, '')
       .trim();
 
-    // Ensure valid response
     if (!assistantResponse || assistantResponse.length < 3) {
       assistantResponse = "I'm processing your request!";
     }
 
     // SAFETY: Prevent mixed responses
     const sayingArranging = assistantResponse.toLowerCase().includes("i'll arrange") || 
-                           assistantResponse.toLowerCase().includes("arranging");
+                           assistantResponse.toLowerCase().includes("arranging") ||
+                           assistantResponse.toLowerCase().includes("i'll notify");
     const askingQuestions = assistantResponse.includes('?') || 
-                           assistantResponse.toLowerCase().includes('what') ||
+                           assistantResponse.toLowerCase().includes('what would') ||
                            assistantResponse.toLowerCase().includes('which') ||
-                           assistantResponse.toLowerCase().includes('how');
+                           assistantResponse.toLowerCase().includes('could you tell');
 
     if (sayingArranging && askingQuestions) {
       console.warn('⚠️ MIXED RESPONSE DETECTED! Fixing...');
       if (controlJson?.action === 'make_call') {
-        assistantResponse = "I'll arrange that for you right away.";
+        assistantResponse = "Perfect! I'll arrange that for you.";
       } else {
         assistantResponse = "I can help with that. Could you provide more details?";
       }
@@ -971,64 +1014,67 @@ Respond naturally and conversationally as the hotel assistant.`;
       
       // Handle acknowledgments
       if (controlJson.action === 'acknowledge') {
-        console.log(`💬 AI acknowledging follow-up information in room ${room}`);
+        console.log(`💬 AI acknowledging follow-up in room ${room}`);
         if (roomData) {
           roomData.pendingAction = null;
         }
         return { ok: true, assistantResponse };
       }
       
-      // Handle detail collection
+      // Handle detail collection - WITH PROPER INTENT INFERENCE
       if (controlJson.collect_details) {
+        let inferredIntent = controlJson.intent;
+        
+        // CRITICAL: Infer intent from service_type if not explicitly provided
+        if (!inferredIntent && controlJson.service_type) {
+          inferredIntent = inferIntentFromServiceType(controlJson.service_type);
+          console.log(`🔍 Inferred intent "${inferredIntent}" from service type "${controlJson.service_type}"`);
+        }
+        
+        // FAIL SAFE: If still no intent, log error and ask for clarification
+        if (!inferredIntent) {
+          console.error(`❌ CRITICAL: No intent detected for service type: ${controlJson.service_type}`);
+          // Don't store pending action, force AI to clarify
+          return { 
+            ok: true, 
+            assistantResponse: "I want to help! Could you tell me a bit more about what you need?" 
+          };
+        }
+        
         if (roomData) {
           roomData.pendingAction = {
             type: 'collect_details',
             service_type: controlJson.service_type,
             original_request: userText,
-            intent: controlJson.intent || 'RECEPTIONIST_REQUEST'
+            intent: inferredIntent
           };
-          console.log(`💬 AI requesting details for ${controlJson.service_type} in room ${room}`);
+          console.log(`💬 AI requesting details for "${controlJson.service_type}" with intent: ${inferredIntent}`);
         }
         return { ok: true, assistantResponse };
       }
       
       // Handle service call creation
       if (controlJson.action === 'make_call' && controlJson.message) {
-        console.log(`🚨 AI creating staff request for room ${room}: "${controlJson.message}"`);
         
-        // Determine department
-        let departments = [];
-        switch(controlJson.intent) {
-          case 'FOOD_ORDER':
-            departments = ['Restaurant'];
-            console.log(`🍕 FOOD ORDER: Routing to Restaurant for room ${room}`);
-            break;
-          case 'HOUSEKEEPING':
-          case 'MAINTENANCE':
-            departments = ['Housekeeping'];
-            console.log(`🧹 HOUSEKEEPING: Routing to Housekeeping for room ${room}`);
-            break;
-          case 'RECEPTIONIST_REQUEST':
-            departments = ['Receptionist'];
-            console.log(`🎯 RECEPTION REQUEST: Routing to Reception for room ${room}`);
-            break;
-          case 'SECURITY_REQUEST':
-          case 'SECURITY_THREAT':
-            departments = ['Security'];
-            console.log(`🛡️ SECURITY ALERT: Routing to Security for room ${room}`);
-            break;
-          case 'MEDICAL_ASSISTANCE':
-            departments = ['Receptionist'];
-            console.log(`🏥 MEDICAL: Routing to Reception for room ${room}`);
-            break;
-          case 'EMERGENCY':
-          case 'MEDICAL_EMERGENCY':
-            departments = ['Receptionist', 'Security'];
-            console.log(`🚨🚨 EMERGENCY: Routing to Reception and Security for room ${room}`);
-            break;
-          default:
-            departments = ['Receptionist'];
-            console.log(`❓ UNKNOWN INTENT: Defaulting to Reception for room ${room}`);
+        // VALIDATION: Ensure intent is present and valid
+        if (!controlJson.intent) {
+          console.error(`❌ CRITICAL: Service call created without intent!`);
+          console.error(`Message: ${controlJson.message}`);
+          // Try to infer from message content
+          controlJson.intent = inferIntentFromMessage(controlJson.message);
+          console.log(`🔧 Emergency intent inference: ${controlJson.intent}`);
+        }
+        
+        console.log(`🚨 AI creating staff request for room ${room}:`);
+        console.log(`   Intent: ${controlJson.intent}`);
+        console.log(`   Message: ${controlJson.message}`);
+        
+        // Determine departments based on intent
+        const departments = getDepartmentsForIntent(controlJson.intent, room);
+        
+        if (departments.length === 0) {
+          console.error(`❌ No departments found for intent: ${controlJson.intent}`);
+          departments.push('Receptionist'); // Emergency fallback
         }
 
         // Create requests
@@ -1054,7 +1100,7 @@ Respond naturally and conversationally as the hotel assistant.`;
           activeRequests.set(request.id, request);
           createdRequests.push(request);
           
-          console.log(`📋 Created request ${request.id} for ${department}: ${request.message.substring(0, 50)}...`);
+          console.log(`📋 Created request ${request.id} for ${department}`);
         }
         
         // Save to database
@@ -1068,7 +1114,7 @@ Respond naturally and conversationally as the hotel assistant.`;
             ...request,
             priority: request.isEmergency ? 'HIGH' : 'NORMAL'
           });
-          console.log(`📡 Broadcasted ${request.department} request ${request.id}`);
+          console.log(`📡 Broadcasted to ${request.department}: "${request.message}"`);
         }
 
         // Set up backup timers
@@ -1139,11 +1185,137 @@ Respond naturally and conversationally as the hotel assistant.`;
     console.error('❌ AI assistant error:', err?.response?.data || err?.message || err);
     return {
       ok: true,
-      assistantResponse: "I'm processing your request and will notify the appropriate department!"
+      assistantResponse: "I'm here to help! Let me connect you with our team."
     };
   }
 }
+// ----------------------------------------------------
+// AI Assistant Helper Functions
+// ----------------------------------------------------
+function inferIntentFromServiceType(serviceType) {
+  const service = serviceType.toLowerCase();
+  
+  // Food-related
+  if (service.includes('food') || service.includes('meal') || service.includes('breakfast') ||
+      service.includes('lunch') || service.includes('dinner') || service.includes('snack') ||
+      service.includes('restaurant') || service.includes('order') || service.includes('eat')) {
+    return 'FOOD_ORDER';
+  }
+  
+  // Housekeeping-related
+  if (service.includes('housekeeping') || service.includes('cleaning') || service.includes('clean') ||
+      service.includes('towel') || service.includes('pillow') || service.includes('sheet') ||
+      service.includes('tidy') || service.includes('room service')) {
+    return 'HOUSEKEEPING';
+  }
+  
+  // Maintenance-related
+  if (service.includes('repair') || service.includes('fix') || service.includes('broken') ||
+      service.includes('maintenance') || service.includes('not working')) {
+    return 'MAINTENANCE';
+  }
+  
+  // Transport-related
+  if (service.includes('cab') || service.includes('taxi') || service.includes('transport') ||
+      service.includes('ride') || service.includes('uber') || service.includes('car')) {
+    return 'RECEPTIONIST_REQUEST';
+  }
+  
+  // Emergency-related
+  if (service.includes('emergency') || service.includes('urgent') || service.includes('help')) {
+    return 'EMERGENCY';
+  }
+  
+  // Security-related
+  if (service.includes('security') || service.includes('suspicious') || service.includes('threat')) {
+    return 'SECURITY_THREAT';
+  }
+  
+  // Medical-related
+  if (service.includes('medical') || service.includes('doctor') || service.includes('hurt')) {
+    return 'MEDICAL_ASSISTANCE';
+  }
+  
+  // Default to receptionist for general queries
+  console.warn(`⚠️ Could not infer intent from service type: "${serviceType}" - needs clarification`);
+  return null; // Return null to force clarification
+}
 
+function inferIntentFromMessage(message) {
+  const msg = message.toLowerCase();
+  
+  // Check for food keywords
+  if (msg.includes('burger') || msg.includes('pizza') || msg.includes('food') || 
+      msg.includes('meal') || msg.includes('breakfast') || msg.includes('order')) {
+    return 'FOOD_ORDER';
+  }
+  
+  // Check for housekeeping keywords
+  if (msg.includes('clean') || msg.includes('towel') || msg.includes('housekeeping') ||
+      msg.includes('pillow') || msg.includes('sheet')) {
+    return 'HOUSEKEEPING';
+  }
+  
+  // Check for transport keywords
+  if (msg.includes('cab') || msg.includes('taxi') || msg.includes('airport') ||
+      msg.includes('transport') || msg.includes('ride')) {
+    return 'RECEPTIONIST_REQUEST';
+  }
+  
+  // Check for emergency keywords
+  if (msg.includes('emergency') || msg.includes('urgent') || msg.includes('intruder')) {
+    return 'EMERGENCY';
+  }
+  
+  return 'RECEPTIONIST_REQUEST'; // Safe fallback
+}
+
+function getDepartmentsForIntent(intent, room) {
+  const departments = [];
+  
+  switch(intent) {
+    case 'FOOD_ORDER':
+      departments.push('Restaurant');
+      console.log(`🍕 FOOD ORDER: Routing to Restaurant for room ${room}`);
+      break;
+      
+    case 'HOUSEKEEPING':
+    case 'MAINTENANCE':
+      departments.push('Housekeeping');
+      console.log(`🧹 HOUSEKEEPING/MAINTENANCE: Routing to Housekeeping for room ${room}`);
+      break;
+      
+    case 'RECEPTIONIST_REQUEST':
+      departments.push('Receptionist');
+      console.log(`🎯 RECEPTION REQUEST: Routing to Reception for room ${room}`);
+      break;
+      
+    case 'SECURITY_REQUEST':
+    case 'SECURITY_THREAT':
+      departments.push('Security');
+      console.log(`🛡️ SECURITY: Routing to Security for room ${room}`);
+      break;
+      
+    case 'MEDICAL_ASSISTANCE':
+      departments.push('Receptionist');
+      console.log(`🏥 MEDICAL: Routing to Reception for room ${room}`);
+      break;
+      
+    case 'EMERGENCY':
+    case 'MEDICAL_EMERGENCY':
+      departments.push('Receptionist', 'Security');
+      console.log(`🚨🚨 EMERGENCY: Routing to Reception AND Security for room ${room}`);
+      break;
+      
+    default:
+      console.warn(`⚠️ Unknown intent "${intent}" - defaulting to Reception for room ${room}`);
+      departments.push('Receptionist');
+  }
+  
+  return departments;
+}
+
+module.exports = { getAIAssistantResponse };
 // ----------------------------------------------------
 // Database Initialization
 // ----------------------------------------------------
