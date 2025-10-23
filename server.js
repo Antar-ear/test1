@@ -747,14 +747,8 @@ function getGuestLanguageInRoom(room) {
 }
 
 // ----------------------------------------------------
-// FIXED AI Assistant Logic with Emergency Routing and Better Response Handling
+// AI Assistant Logic [REVISED PROMPT]
 // ----------------------------------------------------
-// ----------------------------------------------------
-// BULLETPROOF AI Assistant Logic with Emergency Routing
-// ----------------------------------------------------
-// FIXED AI Assistant Logic - No defaults, proper intent detection, concise staff messages
-// ----------------------------------------------------
-
 async function getAIAssistantResponse(text, room, language, history = []) {
   try {
     if (!process.env.GROQ_API_KEY) {
@@ -792,9 +786,7 @@ async function getAIAssistantResponse(text, room, language, history = []) {
 You must respond EXACTLY like this:
 
 RESPONSE: [Warm confirmation in user's language]
-JSON: {"action":"make_call","intent":"${pendingAction.intent}","message":"Rm ${roomNumber}: [brief action] - [key details]"}
-
-NEVER add anything else. NEVER ask more questions.`;
+JSON: {"action":"make_call","intent":"${pendingAction.intent}","message":"Rm ${roomNumber}: [brief action] - [key details]"}`;
             
             userPrompt = `User provided details: "${userText}"`;
             
@@ -813,99 +805,55 @@ JSON: {"action":"cancel"}`;
         }
         
     } else {
-        // Main conversation - EXPLICIT intent detection with NO defaults
-        systemPrompt = `You are a friendly AI concierge at ${hotelData.info.hotel_name}.
+        // Main conversation - REVISED PROMPT to prevent monologue leak
+        systemPrompt = `You are an AI concierge. Your task is to process a guest's request by thinking step-by-step and then providing a final, clean response.
 
-**LANGUAGE RULE (CRITICAL):**
-STEP 1: Detect what language the user is speaking
-STEP 2: Respond in THAT EXACT LANGUAGE
-STEP 3: Staff message stays in English (short/concise)
+**1. THINKING PROCESS (Internal Monologue):**
+First, analyze the user's message internally. Follow these steps in your head, but DO NOT show them in your final output:
+- Step 1: Detect the guest's language.
+- Step 2: Classify the user's intent from this list: FOOD_ORDER, HOUSEKEEPING, MAINTENANCE, RECEPTIONIST_REQUEST, EMERGENCY, SECURITY_THREAT, MEDICAL_ASSISTANCE.
+- Step 3: Decide on the action: provide_info, make_call, or collect_details.
+- Step 4: Formulate a concise staff message in English if making a call.
+- Step 5: Formulate a warm, conversational response to the guest in THEIR language.
 
-Languages you support: English, Spanish, German, French, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia
+**2. FINAL OUTPUT FORMAT (CRITICAL):**
+Your final output MUST follow this exact structure. Do not include any of your thinking steps.
 
-**INTENT DETECTION (NO DEFAULTS ALLOWED):**
+RESPONSE: [Your user-facing response from Step 5 goes here. Speak in the user's detected language.]
+JSON: [The JSON for the action from Step 3 goes here.]
 
-Analyze the request and classify as ONE of these:
-- FOOD_ORDER: food, meal, burger, pizza, breakfast, lunch, dinner, snack, drink, restaurant service
-- HOUSEKEEPING: cleaning, towels, pillows, sheets, room clean, housekeeping, tidy up, make bed
-- MAINTENANCE: repair, broken, not working, fix, AC, TV, lights, plumbing, electrical
-- RECEPTIONIST_REQUEST: cab, taxi, transport, checkout, information, general help, booking, concierge
-- EMERGENCY: emergency, urgent help, intruder, theft, serious medical
-- SECURITY_THREAT: suspicious person, threat, danger, harassment
-- MEDICAL_ASSISTANCE: doctor, hurt, pain, medical help, injury
+**Examples of FINAL OUTPUT:**
 
-**IF YOU CANNOT CONFIDENTLY DETECT INTENT:** Ask clarifying questions, don't guess!
+Example 1 (Specific Request):
+User says: "I need towels"
+Your FINAL OUTPUT:
+RESPONSE: Certainly! I'll have some fresh towels sent to your room right away.
+JSON: {"action":"make_call","intent":"HOUSEKEEPING","message":"Rm ${roomNumber}: needs fresh towels"}
 
-**RESPONSE TYPES:**
+Example 2 (Vague Request):
+User says: "I need food" (in Hindi)
+Your FINAL OUTPUT:
+RESPONSE: ज़रूर! आप क्या खाना चाहेंगे? हमारे पास बर्गर, पिज्जा और सैंडविच हैं। (Of course! What would you like to eat? We have burgers, pizza, and sandwiches.)
+JSON: {"collect_details":true,"service_type":"food","intent":"FOOD_ORDER"}
 
-TYPE 1: Direct Information (wifi, check-in times, facilities)
-→ Answer naturally in user's language
-→ JSON: {"action":"provide_info","info_type":"[wifi/checkin/facility]"}
-
-TYPE 2: Service with Specific Details
-→ Acknowledge warmly
-→ JSON: {"action":"make_call","intent":"[DETECTED_INTENT]","message":"Rm ${roomNumber}: [concise action]"}
-   Examples:
-   - "Rm ${roomNumber}: veg burger order"
-   - "Rm ${roomNumber}: extra towels needed"
-   - "Rm ${roomNumber}: AC not working"
-   - "Rm ${roomNumber}: taxi to airport 3pm"
-
-TYPE 3: Vague Request (needs details)
-→ Ask what they need specifically
-→ JSON: {"collect_details":true,"service_type":"[what they asked for]","intent":"[MUST SPECIFY BASED ON SERVICE TYPE]"}
-   Examples:
-   - "I need food" → {"collect_details":true,"service_type":"food","intent":"FOOD_ORDER"}
-   - "housekeeping please" → {"collect_details":true,"service_type":"housekeeping","intent":"HOUSEKEEPING"}
-   - "can you arrange transport" → {"collect_details":true,"service_type":"transport","intent":"RECEPTIONIST_REQUEST"}
-
-TYPE 4: Follow-up Info (after request processed)
-→ Thank naturally
-→ JSON: {"action":"acknowledge"}
-
-**STAFF MESSAGE RULES:**
-✅ SHORT: "Rm ${roomNumber}: [action]"
-✅ ACTION-ORIENTED: What needs to be done
-✅ KEY DETAILS ONLY: Essential info
-❌ NO full sentences to staff
-❌ NO "Guest requests..."
-❌ NO unnecessary words
-
-Examples of GOOD staff messages:
-- "Rm 101: veg burger + fries"
-- "Rm 205: 3 towels needed"
-- "Rm 310: taxi to JFK 2pm"
-- "Rm 142: room cleaning now"
-- "Rm 508: AC broken - urgent"
+Example 3 (Information):
+User says: "what is the wifi password"
+Your FINAL OUTPUT:
+RESPONSE: The WiFi password is "${hotelData.info.wifi_password || 'Ask reception'}". Let me know if you need anything else!
+JSON: {"action":"provide_info","info_type":"wifi"}
 
 **HOTEL INFO:**
 - Name: ${hotelData.info.hotel_name}
-- Check-in: ${hotelData.info.check_in_time} / Check-out: ${hotelData.info.check_out_time}
+- Check-in/out: ${hotelData.info.check_in_time} / ${hotelData.info.check_out_time}
 - WiFi: ${hotelData.info.wifi_password || 'Ask reception'}
 - Phone: ${hotelData.info.front_desk_number}
 - Facilities: ${hotelData.facilities.map(f => f.name).join(', ') || 'Pool, Gym, Restaurant'}
-
-**ROUTING RULES:**
-- Food/Restaurant → FOOD_ORDER → Restaurant
-- Cleaning/Towels/Housekeeping → HOUSEKEEPING → Housekeeping
-- Repairs/Broken items → MAINTENANCE → Housekeeping
-- Transport/Info/General → RECEPTIONIST_REQUEST → Reception
-- Emergencies → EMERGENCY → Reception + Security
-- Security Issues → SECURITY_THREAT → Security
-- Medical → MEDICAL_ASSISTANCE → Reception
 
 Chat history: ${formattedHistory || 'New conversation'}`;
         
         userPrompt = `Guest in Room ${roomNumber} says: "${userText}"
 
-CRITICAL STEPS:
-1. Detect the language they're speaking
-2. Classify the intent based on keywords/context
-3. If specific details provided → create service call with concise message
-4. If vague → ask for details WITH proper intent
-5. Respond to guest in THEIR language
-
-Now process this request:`;
+Remember to follow the two-part process: THINK internally, then provide the FINAL OUTPUT in the specified format. Do not show your steps.`;
     }
 
     const completion = await groq.chat.completions.create({
@@ -1315,7 +1263,6 @@ function getDepartmentsForIntent(intent, room) {
   return departments;
 }
 
-module.exports = { getAIAssistantResponse };
 // ----------------------------------------------------
 // Database Initialization
 // ----------------------------------------------------
