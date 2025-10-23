@@ -299,7 +299,41 @@
       transition: all 0.3s ease;
       border: 2px solid rgba(255, 255, 255, 0.1);
       position: relative;
-      overflow: hidden;
+      overflow: visible; /* Changed from hidden */
+    }
+
+    /* NOTIFICATION BADGE STYLES */
+    .notification-badge {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background-color: #ff4757;
+        color: white;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: bold;
+        box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+        border: 2px solid #1a1a2e;
+        transform: scale(0);
+        opacity: 0;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
+        animation: pulse-badge 2s infinite;
+    }
+
+    .notification-badge.visible {
+        transform: scale(1);
+        opacity: 1;
+    }
+    
+    @keyframes pulse-badge {
+        0% { box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4); }
+        50% { box-shadow: 0 4px 20px rgba(255, 71, 87, 0.7); }
+        100% { box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4); }
     }
 
     .department-card::before {
@@ -1583,21 +1617,25 @@
         <p class="department-subtitle">Choose your staff role to view your department's requests</p>
         <div class="department-cards">
           <button class="department-card receptionist-card" onclick="selectDepartment('Receptionist')">
+            <span class="notification-badge" id="receptionist-badge"></span>
             <div class="department-icon">🏨</div>
             <div class="department-name">Receptionist</div>
             <div class="department-description">Handle guest inquiries, check-ins, and general assistance</div>
           </button>
           <button class="department-card housekeeping-card" onclick="selectDepartment('Housekeeping')">
+            <span class="notification-badge" id="housekeeping-badge"></span>
             <div class="department-icon">🧹</div>
             <div class="department-name">Housekeeping</div>
             <div class="department-description">Manage room cleaning, maintenance, and supplies</div>
           </button>
           <button class="department-card restaurant-card" onclick="selectDepartment('Restaurant')">
+            <span class="notification-badge" id="restaurant-badge"></span>
             <div class="department-icon">🍽️</div>
             <div class="department-name">Restaurant</div>
             <div class="department-description">Process food orders and dining requests</div>
           </button>
           <button class="department-card security-card" onclick="selectDepartment('Security')">
+            <span class="notification-badge" id="security-badge"></span>
             <div class="department-icon">🛡️</div>
             <div class="department-name">Security</div>
             <div class="department-description">Monitor safety concerns and emergency situations</div>
@@ -2204,7 +2242,10 @@
       socket = io();
       socket.on('connect', () => {
         updateConnectionStatus(true);
-        if (currentRole === 'staff') { socket.emit('join_room', { role: 'staff' }); }
+        if (currentRole === 'staff') {
+             socket.emit('join_room', { role: 'staff' });
+             updateDepartmentBadgeCounts();
+        }
         else if (currentRoom && currentRole && currentRole !== 'analytics') {
           const lang = document.getElementById('modernGuestLanguage')?.value || document.getElementById('guestLanguage')?.value || 'en-US';
           socket.emit('join_room', { room: currentRoom, role: currentRole, language: lang });
@@ -2255,11 +2296,12 @@
                   renderRequestCard(req);
               }
           });
+          updateDepartmentBadgeCounts();
       });
       
       socket.on('new_request', (request) => {
         console.log('📥 Received new_request:', request);
-
+        updateDepartmentBadgeCounts();
         if (request.isEmergency || request.priority === 'HIGH') {
           console.log('🚨 EMERGENCY REQUEST RECEIVED:', request);
 
@@ -2298,8 +2340,44 @@
       socket.on('request_acknowledged', (requestId) => {
         const card = document.getElementById(requestId);
         if (card) { card.style.transition = 'opacity 0.3s'; card.style.opacity = '0'; setTimeout(() => card.remove(), 300); }
+        updateDepartmentBadgeCounts();
       });
     }
+    
+    async function updateDepartmentBadgeCounts() {
+        try {
+            const response = await fetch('/api/requests/active');
+            const requests = await response.json();
+
+            const counts = {
+                Receptionist: 0,
+                Housekeeping: 0,
+                Restaurant: 0,
+                Security: 0
+            };
+
+            requests.forEach(req => {
+                if (req.status === 'pending' && counts.hasOwnProperty(req.department)) {
+                    counts[req.department]++;
+                }
+            });
+
+            for (const [dept, count] of Object.entries(counts)) {
+                const badge = document.getElementById(`${dept.toLowerCase()}-badge`);
+                if (badge) {
+                    badge.textContent = count;
+                    if (count > 0) {
+                        badge.classList.add('visible');
+                    } else {
+                        badge.classList.remove('visible');
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error updating badge counts:', error);
+        }
+    }
+
 
     function selectRole(role, btnEl) {
         if (analyticsInterval) { clearInterval(analyticsInterval); analyticsInterval = null; }
@@ -2327,6 +2405,7 @@
         } else if (role === 'staff') {
             socket.emit('join_room', { role: 'staff' });
             checkNotificationPermission();
+            updateDepartmentBadgeCounts();
         } else if (pendingRoomFromQR) {
             joinRoom(pendingRoomFromQR);
         } else if (role === 'receptionist' && !isRoomLink) {
@@ -2387,7 +2466,7 @@
         const list = document.querySelector(`#${dept}-requests .request-list`);
         if (list) list.innerHTML = '';
       });
-
+      updateDepartmentBadgeCounts();
       currentDepartment = null;
       currentRole = 'staff';
     }
