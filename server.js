@@ -325,6 +325,43 @@ async function getPushSubscriptions() {
   }
 }
 
+// Add this new function in server.js, for example, after the getPushSubscriptions function.
+
+async function sendPushNotification(request) {
+  if (!publicVapidKey || !privateVapidKey) {
+    console.log('Push notifications are not configured (VAPID keys missing).');
+    return;
+  }
+
+  const payload = JSON.stringify({
+    title: `🚨 New ${request.department} Request (Room ${request.roomNumber})`,
+    body: request.message,
+    data: {
+      requestId: request.id,
+      department: request.department,
+    },
+  });
+
+  try {
+    const subscriptions = await getPushSubscriptions();
+    console.log(`📡 Sending push notification for request ${request.id} to ${subscriptions.length} subscribers.`);
+
+    const promises = subscriptions.map(sub =>
+      webpush.sendNotification(sub, payload).catch(err => {
+        // Handle expired or invalid subscriptions
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          console.log('Subscription has expired or is no longer valid: ', err.endpoint);
+          // TODO: Add logic here to remove the subscription from your database
+        } else {
+          console.error('Error sending push notification:', err);
+        }
+      })
+    );
+    await Promise.all(promises);
+  } catch (err) {
+    console.error('Failed to send push notifications:', err);
+  }
+}
 // ----------------------------------------------------
 // Database-backed Analytics Class
 // ----------------------------------------------------
@@ -1057,6 +1094,13 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
             priority: request.isEmergency ? 'HIGH' : 'NORMAL'
           });
           console.log(`📡 Broadcasted to ${request.department}: "${request.message}"`);
+          // =================================================================
+          // START OF THE FIX: Trigger the push notification here
+          // =================================================================
+          sendPushNotification(request); 
+          // =================================================================
+          // END OF THE FIX
+          // =================================================================
         }
 
         for (const request of createdRequests) {
