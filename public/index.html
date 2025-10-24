@@ -2441,14 +2441,8 @@
       document.getElementById(departmentContentId).classList.add('active');
 
       // Setup notification button for this department
-      const notificationBtn = document.getElementById('enableNotificationsBtn' + department);
-      if (notificationBtn) {
-        notificationBtn.onclick = checkNotificationPermission;
-        if (Notification.permission === 'granted') {
-          notificationBtn.textContent = '✓ Notifications Enabled';
-          notificationBtn.disabled = true;
-        }
-      }
+    // Setup notification button for this department
+setupNotificationButton('enableNotificationsBtn' + department);
 
       // Load requests for this department only
       loadDepartmentRequests(department);
@@ -3444,42 +3438,40 @@
     }
 
     // Notification functions - FIXED WITH NULL CHECK
-    function checkNotificationPermission() {
-      // Find any notification button that exists
-      const possibleButtons = [
-        'enableNotificationsBtnReceptionist',
-        'enableNotificationsBtnHousekeeping',
-        'enableNotificationsBtnRestaurant',
-        'enableNotificationsBtnSecurity'
-      ];
-      
-      let enableNotificationsBtn = null;
-      for (const btnId of possibleButtons) {
-        const btn = document.getElementById(btnId);
-        if (btn) {
-          enableNotificationsBtn = btn;
-          break;
-        }
-      }
-      
-      if (!enableNotificationsBtn) return; // Element doesn't exist on this page
-      
-      if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-        enableNotificationsBtn.textContent = 'Notifications Not Supported';
-        enableNotificationsBtn.disabled = true;
-        return;
-      }
-      if (Notification.permission === 'granted') {
-        enableNotificationsBtn.textContent = '✓ Notifications Enabled';
-        enableNotificationsBtn.disabled = true;
-      } else {
-        enableNotificationsBtn.textContent = 'Enable Notifications';
-        enableNotificationsBtn.disabled = false;
-        // Add click handler
-        enableNotificationsBtn.onclick = subscribeUserToPush;
-      }
-    }
+    // Notification functions - FIXED
+function setupNotificationButton(buttonId) {
+  const btn = document.getElementById(buttonId);
+  if (!btn) return;
+  
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    btn.textContent = 'Notifications Not Supported';
+    btn.disabled = true;
+    return;
+  }
+  
+  if (Notification.permission === 'granted') {
+    btn.textContent = '✓ Notifications Enabled';
+    btn.disabled = true;
+  } else {
+    btn.textContent = 'Enable Notifications';
+    btn.disabled = false;
+    btn.onclick = subscribeUserToPush;
+  }
+}
 
+function checkNotificationPermission() {
+  // Setup all notification buttons that exist
+  const possibleButtons = [
+    'enableNotificationsBtnReceptionist',
+    'enableNotificationsBtnHousekeeping',
+    'enableNotificationsBtnRestaurant',
+    'enableNotificationsBtnSecurity'
+  ];
+  
+  for (const btnId of possibleButtons) {
+    setupNotificationButton(btnId);
+  }
+}
     function urlBase64ToUint8Array(base64String) {
       const padding = '='.repeat((4 - base64String.length % 4) % 4);
       const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
