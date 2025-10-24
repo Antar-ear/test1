@@ -749,6 +749,9 @@ function getGuestLanguageInRoom(room) {
 // ----------------------------------------------------
 // AI Assistant Logic [REVISED PROMPT]
 // ----------------------------------------------------
+// ----------------------------------------------------
+// AI Assistant Logic [REVISED & FIXED]
+// ----------------------------------------------------
 async function getAIAssistantResponse(text, room, language, history = []) {
   try {
     if (!process.env.GROQ_API_KEY) {
@@ -770,25 +773,28 @@ async function getAIAssistantResponse(text, room, language, history = []) {
         console.log(`🤖 Processing follow-up for room ${room}:`, pendingAction);
         
         if (pendingAction.type === 'collect_details') {
-            // Use the inferred intent from when we asked for details
-            systemPrompt = `The user asked for ${pendingAction.service_type}. You asked for details. They replied: "${userText}"
+            // =================================================================
+            // START OF THE FIX: New, smarter prompt for summarization
+            // =================================================================
+            systemPrompt = `The user's original request was about "${pendingAction.original_request}". You asked for more details. The user has now replied with: "${userText}".
+
+Your task is to combine these two pieces of information into a single, concise staff message.
 
 **CRITICAL RULES:**
-1. Respond in THE SAME LANGUAGE the user is speaking
-2. Staff message must be SHORT and ACTION-ORIENTED
+1. The final staff message must be a summary. For example, if the original request was "I need a cab" and the new detail is "to the airport at 5pm", the final message should be "Rm ${roomNumber}: Cab to airport at 5 PM".
+2. Respond to the user in THEIR LANGUAGE, confirming you have what you need.
 3. Use the intent: ${pendingAction.intent}
 
-**STAFF MESSAGE FORMAT:**
-- NOT: "Room ${roomNumber}: Guest requests ${pendingAction.service_type} - ${userText}"
-- YES: "Room ${roomNumber}: ${pendingAction.service_type} - ${userText}"
-- OR BETTER: "Rm ${roomNumber}: clean room", "Rm ${roomNumber}: veg burger", "Rm ${roomNumber}: taxi to airport"
+**FINAL OUTPUT FORMAT (CRITICAL):**
+Your response MUST be in this exact format.
 
-You must respond EXACTLY like this:
-
-RESPONSE: [Warm confirmation in user's language]
-JSON: {"action":"make_call","intent":"${pendingAction.intent}","message":"Rm ${roomNumber}: [brief action] - [key details]"}`;
+RESPONSE: [A warm confirmation to the guest in their language, like "Perfect, I'll arrange that for you!"]
+JSON: {"action":"make_call","intent":"${pendingAction.intent}","message":"Rm ${roomNumber}: [Your summarized message goes here]"}`;
             
-            userPrompt = `User provided details: "${userText}"`;
+            userPrompt = `Combine "${pendingAction.original_request}" with the detail "${userText}" into a single staff request.`;
+            // =================================================================
+            // END OF THE FIX
+            // =================================================================
             
         } else if (pendingAction.confirmation_question) {
             systemPrompt = `You asked: "${pendingAction.confirmation_question}". User replied: "${userText}"
@@ -805,7 +811,7 @@ JSON: {"action":"cancel"}`;
         }
         
     } else {
-        // Main conversation - REVISED PROMPT to prevent monologue leak
+        // Main conversation prompt remains the same
         systemPrompt = `You are an AI concierge. Your task is to process a guest's request by thinking step-by-step and then providing a final, clean response.
 
 **1. THINKING PROCESS (Internal Monologue):**
@@ -858,7 +864,7 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
 
     const completion = await groq.chat.completions.create({
       model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-      temperature: 0.05, // Very low for consistency
+      temperature: 0.05,
       top_p: 0.9,
       max_tokens: 400,
       stream: false,
@@ -871,11 +877,10 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
     const fullResponse = completion?.choices?.[0]?.message?.content?.trim?.() || "I'll help with that!";
     console.log(`🤖 AI raw response for room ${room}:`, fullResponse);
 
-    // BULLETPROOF response parsing
+    // BULLETPROOF response parsing (remains the same)
     let assistantResponse = "I can help with that.";
     let controlJson = null;
 
-    // Parse structured format
     const lines = fullResponse.split('\n').map(l => l.trim()).filter(l => l);
     let responseLine = '';
     let jsonLine = '';
@@ -894,11 +899,9 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
       }
     }
 
-    // Use the parsed response
     if (responseLine) {
       assistantResponse = responseLine;
     } else {
-      // Aggressive fallback parsing
       const cleanResponse = fullResponse
         .replace(/JSON\s*:.*$/gim, '')
         .replace(/\{[\s\S]*?\}/g, '')
@@ -910,7 +913,6 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
       }
     }
 
-    // Parse JSON with error handling
     if (jsonLine) {
       try {
         controlJson = JSON.parse(jsonLine);
@@ -928,7 +930,6 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
       }
     }
 
-    // SAFETY: Remove any remaining JSON artifacts from user-facing response
     assistantResponse = assistantResponse
       .replace(/\{[\s\S]*?\}/g, '')
       .replace(/JSON\s*:.*$/gim, '')
@@ -939,7 +940,6 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
       assistantResponse = "I'm processing your request!";
     }
 
-    // SAFETY: Prevent mixed responses
     const sayingArranging = assistantResponse.toLowerCase().includes("i'll arrange") || 
                            assistantResponse.toLowerCase().includes("arranging") ||
                            assistantResponse.toLowerCase().includes("i'll notify");
@@ -960,7 +960,6 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
     // Process control actions
     if (controlJson) {
       
-      // Handle acknowledgments
       if (controlJson.action === 'acknowledge') {
         console.log(`💬 AI acknowledging follow-up in room ${room}`);
         if (roomData) {
@@ -969,20 +968,16 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
         return { ok: true, assistantResponse };
       }
       
-      // Handle detail collection - WITH PROPER INTENT INFERENCE
       if (controlJson.collect_details) {
         let inferredIntent = controlJson.intent;
         
-        // CRITICAL: Infer intent from service_type if not explicitly provided
         if (!inferredIntent && controlJson.service_type) {
           inferredIntent = inferIntentFromServiceType(controlJson.service_type);
           console.log(`🔍 Inferred intent "${inferredIntent}" from service type "${controlJson.service_type}"`);
         }
         
-        // FAIL SAFE: If still no intent, log error and ask for clarification
         if (!inferredIntent) {
           console.error(`❌ CRITICAL: No intent detected for service type: ${controlJson.service_type}`);
-          // Don't store pending action, force AI to clarify
           return { 
             ok: true, 
             assistantResponse: "I want to help! Could you tell me a bit more about what you need?" 
@@ -990,25 +985,28 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
         }
         
         if (roomData) {
+          // =================================================================
+          // START OF THE FIX: Storing the original request for context
+          // =================================================================
           roomData.pendingAction = {
             type: 'collect_details',
             service_type: controlJson.service_type,
-            original_request: userText,
+            original_request: userText, // <-- THE ADDED CONTEXT
             intent: inferredIntent
           };
+          // =================================================================
+          // END OF THE FIX
+          // =================================================================
           console.log(`💬 AI requesting details for "${controlJson.service_type}" with intent: ${inferredIntent}`);
         }
         return { ok: true, assistantResponse };
       }
       
-      // Handle service call creation
       if (controlJson.action === 'make_call' && controlJson.message) {
         
-        // VALIDATION: Ensure intent is present and valid
         if (!controlJson.intent) {
           console.error(`❌ CRITICAL: Service call created without intent!`);
           console.error(`Message: ${controlJson.message}`);
-          // Try to infer from message content
           controlJson.intent = inferIntentFromMessage(controlJson.message);
           console.log(`🔧 Emergency intent inference: ${controlJson.intent}`);
         }
@@ -1017,7 +1015,6 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
         console.log(`   Intent: ${controlJson.intent}`);
         console.log(`   Message: ${controlJson.message}`);
         
-        // Determine departments based on intent
         const departments = getDepartmentsForIntent(controlJson.intent, room);
         
         if (departments.length === 0) {
@@ -1025,7 +1022,6 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
           departments.push('Receptionist'); // Emergency fallback
         }
 
-        // Create requests
         const createdRequests = [];
         
         for (const department of departments) {
@@ -1051,12 +1047,10 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
           console.log(`📋 Created request ${request.id} for ${department}`);
         }
         
-        // Save to database
         for (const request of createdRequests) {
           await saveRequestToDB(request);
         }
         
-        // Broadcast to staff
         for (const request of createdRequests) {
           io.to('staff_room').emit('new_request', {
             ...request,
@@ -1065,7 +1059,6 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
           console.log(`📡 Broadcasted to ${request.department}: "${request.message}"`);
         }
 
-        // Set up backup timers
         for (const request of createdRequests) {
           const timeoutDuration = request.isEmergency ? 1 * 60 * 1000 : 2 * 60 * 1000;
           
@@ -1079,7 +1072,6 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
               activeRequests.set(request.id, req);
               await saveRequestToDB(req);
               
-              // Make Twilio call
               try {
                 if (twilioClient) {
                   const receptionNumber = process.env.RECEPTION_PHONE_NUMBER;
@@ -1111,7 +1103,6 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
           }, timeoutDuration);
         }
 
-        // Clear pending action
         if (roomData) {
           roomData.pendingAction = null;
           console.log(`✅ Cleared pending action for room ${room}`);
@@ -1121,7 +1112,6 @@ Remember to follow the two-part process: THINK internally, then provide the FINA
       }
     }
 
-    // Clear pending action on cancellation
     if (pendingAction && (!controlJson || controlJson.action === 'cancel')) {
       if (roomData) roomData.pendingAction = null;
       console.log(`❌ Cancelled pending action for room ${room}`);
