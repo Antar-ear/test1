@@ -3481,41 +3481,100 @@ function checkNotificationPermission() {
       return outputArray;
     }
 
-    async function subscribeUserToPush() {
-      try {
-        const reg = await navigator.serviceWorker.register('/sw.js');
-        await navigator.serviceWorker.ready;
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') {
-          alert('Notifications permission was not granted.');
-          return;
-        }
-        const { publicKey } = await fetch('/api/push/vapidPublicKey').then(r => r.json());
-        if (!publicKey) throw new Error('Missing VAPID public key from server');
-        const appServerKey = urlBase64ToUint8Array(publicKey);
-        let sub = await reg.pushManager.getSubscription();
-        if (!sub) {
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: appServerKey
-          });
-        }
-        await fetch('/api/push/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subscription: sub,
-            role: currentRole || 'staff',
-            department: currentDepartment || null
-          })
-        });
-        console.log('Push subscription registered.');
-        checkNotificationPermission();
-      } catch (err) {
-        console.error('Push subscribe failed:', err);
-        alert('Push subscribe failed. Check console for details.');
-      }
+async function subscribeUserToPush() {
+  try {
+    // Step 1: Register service worker
+    console.log('📱 Step 1: Registering service worker...');
+    let reg;
+    try {
+      reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+      console.log('✅ Service worker registered successfully');
+    } catch (swError) {
+      console.error('❌ Service worker registration failed:', swError);
+      alert('Failed to register service worker. Make sure sw.js exists and is accessible.');
+      return;
     }
+
+    // Step 2: Request notification permission
+    console.log('📱 Step 2: Requesting notification permission...');
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      console.warn('⚠️ Notification permission denied');
+      alert('Notifications permission was not granted. Please allow notifications in your browser settings.');
+      return;
+    }
+    console.log('✅ Notification permission granted');
+
+    // Step 3: Get VAPID public key
+    console.log('📱 Step 3: Fetching VAPID public key...');
+    let publicKey;
+    try {
+      const response = await fetch('/api/push/vapidPublicKey');
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      publicKey = data.publicKey;
+      if (!publicKey) {
+        throw new Error('Public key is empty in response');
+      }
+      console.log('✅ VAPID public key received');
+    } catch (keyError) {
+      console.error('❌ Failed to get VAPID key:', keyError);
+      alert('Failed to get push notification keys from server. VAPID keys may not be configured.');
+      return;
+    }
+
+    // Step 4: Subscribe to push notifications
+    console.log('📱 Step 4: Subscribing to push notifications...');
+    let sub;
+    try {
+      const appServerKey = urlBase64ToUint8Array(publicKey);
+      sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: appServerKey
+        });
+      }
+      console.log('✅ Push subscription created');
+    } catch (subError) {
+      console.error('❌ Push subscription failed:', subError);
+      alert('Failed to create push subscription. Make sure you are using HTTPS or localhost.');
+      return;
+    }
+
+    // Step 5: Send subscription to server
+    console.log('📱 Step 5: Sending subscription to server...');
+    try {
+      const response = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription: sub,
+          role: currentRole || 'staff',
+          department: currentDepartment || null
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+      
+      console.log('✅ Push subscription registered on server');
+      alert('✅ Notifications enabled successfully!');
+      checkNotificationPermission();
+    } catch (serverError) {
+      console.error('❌ Failed to register subscription on server:', serverError);
+      alert('Failed to register subscription on server. Please try again.');
+    }
+
+  } catch (err) {
+    console.error('❌ Unexpected error in subscribeUserToPush:', err);
+    alert(`Push subscribe failed: ${err.message}\n\nCheck console for details.`);
+  }
+}
 
     function viewRoomQR(roomId, roomNumber) {
       const baseUrl = window.location.origin;
