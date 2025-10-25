@@ -2299,43 +2299,56 @@
           updateDepartmentBadgeCounts();
       });
       
-      socket.on('new_request', (request) => {
-        console.log('📥 Received new_request:', request);
-        updateDepartmentBadgeCounts();
-        if (request.isEmergency || request.priority === 'HIGH') {
-          console.log('🚨 EMERGENCY REQUEST RECEIVED:', request);
+    socket.on('new_request', (request) => {
+  console.log('📥 Received new_request:', request);
+  updateDepartmentBadgeCounts();
+  
+  if (request.isEmergency || request.priority === 'HIGH') {
+    console.log('🚨 EMERGENCY REQUEST RECEIVED:', request);
 
-          let originalTitle = document.title;
-          let flashCount = 0;
-          const flashInterval = setInterval(() => {
-            document.title = flashCount % 2 === 0 ? '🚨 EMERGENCY!' : originalTitle;
-            flashCount++;
-            if (flashCount > 10) {
-              clearInterval(flashInterval);
-              document.title = originalTitle;
-            }
-          }, 500);
+    let originalTitle = document.title;
+    let flashCount = 0;
+    const flashInterval = setInterval(() => {
+      document.title = flashCount % 2 === 0 ? '🚨 EMERGENCY!' : originalTitle;
+      flashCount++;
+      if (flashCount > 10) {
+        clearInterval(flashInterval);
+        document.title = originalTitle;
+      }
+    }, 500);
 
-          playEmergencyAlert();
-          showEmergencyModal(request);
+    playEmergencyAlert();
+    showEmergencyModal(request);
 
-          if (Notification.permission === 'granted') {
-            new Notification(`🚨 EMERGENCY - ${request.department}`, {
-              body: `Room ${request.roomNumber}: ${request.message}`,
-              icon: '/emergency-icon.png',
-              tag: 'emergency',
-              requireInteraction: true
-            });
-          }
-        }
-
-        // Use the department-specific render function if viewing a department page
-        if (currentDepartment && currentRole === 'department') {
-          renderDepartmentRequestCard(request);
-        } else {
-          renderRequestCard(request);
-        }
+    if (Notification.permission === 'granted') {
+      new Notification(`🚨 EMERGENCY - ${request.department}`, {
+        body: `Room ${request.roomNumber}: ${request.message}`,
+        icon: '/emergency-icon.png',
+        tag: 'emergency',
+        requireInteraction: true
       });
+    }
+  } else {
+    // ✨ NEW: Play department-specific notification sound for non-emergency requests
+    playDepartmentNotificationSound(request.department);
+    
+    // Optional: Show browser notification for non-emergency requests too
+    if (Notification.permission === 'granted') {
+      new Notification(`${request.department} Request`, {
+        body: `Room ${request.roomNumber}: ${request.message}`,
+        icon: '/favicon.ico',
+        tag: request.department.toLowerCase()
+      });
+    }
+  }
+
+  // Use the department-specific render function if viewing a department page
+  if (currentDepartment && currentRole === 'department') {
+    renderDepartmentRequestCard(request);
+  } else {
+    renderRequestCard(request);
+  }
+});
       
       socket.on('request_acknowledged', (requestId) => {
         const card = document.getElementById(requestId);
@@ -2916,7 +2929,60 @@ setupNotificationButton('enableNotificationsBtn' + department);
         }
       }
     }
+// Department notification sounds - plays different number of "tings" per department
+function playDepartmentNotificationSound(department) {
+  const tingCounts = {
+    'Housekeeping': 1,
+    'Receptionist': 2,
+    'Restaurant': 3,
+    'Security': 4
+  };
+  
+  const tingCount = tingCounts[department] || 1;
+  console.log(`🔔 Playing ${tingCount} ting(s) for ${department}`);
+  
+  playTings(tingCount);
+}
 
+async function playTings(count) {
+  if (typeof AudioContext === 'undefined' && typeof webkitAudioContext === 'undefined') {
+    console.warn('Web Audio API not supported');
+    return;
+  }
+  
+  const audioContext = new (AudioContext || webkitAudioContext)();
+  
+  for (let i = 0; i < count; i++) {
+    await new Promise(resolve => {
+      setTimeout(() => {
+        playTing(audioContext);
+        resolve();
+      }, i * 400); // 400ms between each ting
+    });
+  }
+}
+
+function playTing(audioContext) {
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  
+  // Create a pleasant "ting" sound (like a notification bell)
+  oscillator.frequency.value = 800; // Higher frequency = more "ting"-like
+  oscillator.type = 'sine'; // Smooth sine wave for bell-like sound
+  
+  const now = audioContext.currentTime;
+  
+  // Envelope: quick attack, quick decay
+  gainNode.gain.setValueAtTime(0, now);
+  gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01); // Quick attack
+  gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3); // Fade out
+  
+  oscillator.start(now);
+  oscillator.stop(now + 0.3);
+}
     function showEmergencyModal(request) {
       const existingModal = document.getElementById('emergencyModal');
       if (existingModal) existingModal.style.display = 'flex';
