@@ -2139,22 +2139,7 @@ io.on('connection', (socket) => {
   }
 });
       
-      // Save to history before removing from active
-      await saveRequestToHistory(request);
-      
-      // Remove from active requests
-      activeRequests.delete(requestId);
-      
-      // Notify all staff members
-      io.to('staff_room').emit('request_acknowledged', requestId);
-      console.log(`✅ Request ${requestId} acknowledged and moved to history`);
-      
-    } catch (error) {
-      console.error('❌ Error acknowledging request:', error);
-      socket.emit('error', { message: 'Failed to acknowledge request' });
-    }
-  });
-
+    
   socket.on('audio_message', async (data = {}) => {
     try {
       const { room, role, language, audioData } = data;
