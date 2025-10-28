@@ -232,24 +232,19 @@ async function saveRequestToDB(request) {
 }
 
 async function saveRequestToHistory(request) {
+  const client = await db.connect();
   try {
-    // First, check if request already exists in history
-    const existingResult = await db.query(`
-      SELECT id FROM service_request_history WHERE id = $1
-    `, [request.id]);
-
-    if (existingResult.rows.length > 0) {
-      console.log(`📝 Request ${request.id} already exists in history, skipping`);
-      return;
-    }
-
-    // Insert into history table
-    await db.query(`
+    // Use a transaction for atomic operations
+    await client.query('BEGIN');
+    
+    // Insert into history (use ON CONFLICT to handle duplicates)
+    await client.query(`
       INSERT INTO service_request_history (
         id, room_id, room_number, message, intent, department,
         status, created_at, acknowledged_at, acknowledged_by,
         call_triggered, is_emergency, completed_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+      ON CONFLICT (id) DO NOTHING
     `, [
       request.id,
       request.room,
@@ -265,18 +260,20 @@ async function saveRequestToHistory(request) {
       request.isEmergency || false
     ]);
     
-    console.log(`💾 Successfully saved request ${request.id} to history (${request.department})`);
+    // Remove from active requests table
+    await client.query(`DELETE FROM service_requests WHERE id = $1`, [request.id]);
     
-    // Remove from active service_requests table
-    await db.query(`DELETE FROM service_requests WHERE id = $1`, [request.id]);
-    console.log(`🗑️ Removed request ${request.id} from active requests`);
+    await client.query('COMMIT');
+    console.log(`💾 Request ${request.id} saved to history successfully`);
     
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('❌ Error saving request to history:', error);
-    console.error('Request data:', JSON.stringify(request, null, 2));
+    throw error;
+  } finally {
+    client.release();
   }
 }
-
 function cleanupRequest(requestId, reason = 'unknown') {
   const request = activeRequests.get(requestId);
   if (request) {
@@ -2105,30 +2102,42 @@ io.on('connection', (socket) => {
   });
 
   // FIXED acknowledge_request handler
-  socket.on('acknowledge_request', async (requestId) => {
-    try {
-      console.log(`✅ Staff ${socket.id} acknowledging request ${requestId}`);
-      
-      const request = activeRequests.get(requestId);
-      if (!request) {
-        console.log(`⚠️ Request ${requestId} not found in active requests`);
-        return;
-      }
+ socket.on('acknowledge_request', async (requestId) => {
+  try {
+    console.log(`✅ Staff ${socket.id} acknowledging request ${requestId}`);
+    
+    const request = activeRequests.get(requestId);
+    if (!request) {
+      console.log(`⚠️ Request ${requestId} not found in active requests`);
+      return;
+    }
 
-      // Clear the timer
-      cleanupRequest(requestId, 'acknowledged by staff');
-      
-      // Mark as acknowledged
-      request.acknowledgedAt = new Date();
-      request.acknowledgedBy = socket.id;
-      request.status = 'acknowledged';
-      
-      console.log(`📝 Moving request ${requestId} to history:`, {
-        id: request.id,
-        room: request.room,
-        department: request.department,
-        message: request.message.substring(0, 50) + '...'
-      });
+    // Clear the timer
+    cleanupRequest(requestId, 'acknowledged by staff');
+    
+    // Mark as acknowledged
+    request.acknowledgedAt = new Date();
+    request.acknowledgedBy = socket.id;
+    request.status = 'acknowledged';
+    
+    // Remove from active requests IMMEDIATELY
+    activeRequests.delete(requestId);
+    
+    // Notify all staff members IMMEDIATELY (don't wait for DB)
+    io.to('staff_room').emit('request_acknowledged', requestId);
+    console.log(`✅ Request ${requestId} acknowledged immediately`);
+    
+    // Save to database in background (non-blocking)
+    saveRequestToHistory(request).catch(err => {
+      console.error(`❌ Background save failed for ${requestId}:`, err);
+      // Request already removed from UI, so just log the error
+    });
+    
+  } catch (error) {
+    console.error('❌ Error acknowledging request:', error);
+    socket.emit('error', { message: 'Failed to acknowledge request' });
+  }
+});
       
       // Save to history before removing from active
       await saveRequestToHistory(request);
