@@ -10,7 +10,24 @@
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e;min-height:100vh;padding:0;color:#ffffff}
     .container{max-width:900px;margin:0 auto;background:transparent;border-radius:0;box-shadow:none;overflow:visible}
-    
+
+    .acknowledge-btn {
+  transition: all 0.2s ease;
+}
+
+.acknowledge-btn:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+.acknowledge-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.request-card {
+  transition: all 0.3s ease-out;
+}
     /* UPDATED HEADER STYLES */
     .header{
       background:linear-gradient(135deg,#667eea,#764ba2);
