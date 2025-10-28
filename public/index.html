@@ -2900,12 +2900,35 @@ setupNotificationButton('enableNotificationsBtn' + department);
       }
     }
     
-    document.addEventListener('click', (e) => {
-      if (e.target.matches('.acknowledge-btn')) {
-        const requestId = e.target.getAttribute('data-id');
-        socket.emit('acknowledge_request', requestId);
-      }
-    });
+   document.addEventListener('click', (e) => {
+  if (e.target.matches('.acknowledge-btn')) {
+    const requestId = e.target.getAttribute('data-id');
+    const card = document.getElementById(requestId);
+    
+    // OPTIMISTIC UPDATE: Remove card immediately
+    if (card) {
+      card.style.opacity = '0.5';
+      card.style.pointerEvents = 'none';
+      e.target.disabled = true;
+      e.target.textContent = 'Processing...';
+      
+      // Animate out
+      setTimeout(() => {
+        card.style.transition = 'all 0.3s ease-out';
+        card.style.transform = 'translateX(100%)';
+        card.style.opacity = '0';
+      }, 50);
+      
+      // Remove from DOM after animation
+      setTimeout(() => {
+        card.remove();
+      }, 350);
+    }
+    
+    // Send to server (but don't wait for response)
+    socket.emit('acknowledge_request', requestId);
+  }
+});
 
     function playEmergencyAlert() {
       if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
